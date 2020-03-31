@@ -51,7 +51,9 @@ def update_meta(docinfo,PDFWriterObj):
 def pdf_timestamp():
 	# generate PDF timestamp relative to utc time
 	NOW = dt.datetime.utcnow()
-	return f'D:{NOW.year}{NOW.month}{NOW.day}{NOW.hour}{NOW.minute}{NOW.second}+01\'00\''
+	print(NOW)
+	# NEEDS TO BE 4 DIGIT YEAR, 2 DIGIT MOND DAY HOUR MINUTE AND SECOND
+	return f'D:{NOW.year:04}{NOW.month:02}{NOW.day:02}{NOW.hour:02}{NOW.minute:02}{NOW.second:02}+00\'00\''
 
 
 def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
