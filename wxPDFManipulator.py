@@ -5,12 +5,17 @@
 #
 
 import wx
-
+from PDFManipulator import *
 # begin wxGlade: dependencies
 # end wxGlade
 
 # begin wxGlade: extracode
 # end wxGlade
+
+
+PROGRAM_VERSION = '20200403'
+FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF"
+
 
 
 class Frame_PDFManipulator(wx.Frame):
@@ -54,6 +59,8 @@ class Frame_PDFManipulator(wx.Frame):
         self.Text_Panel_SelectOutputFile = wx.TextCtrl(self.Panel_PDFManipulator, wx.ID_ANY, "", style=wx.TE_AUTO_URL | wx.TE_READONLY)
         self.Button_Panel_OutputFile = wx.Button(self.Panel_PDFManipulator, wx.ID_ANY, "...")
         self.Button_Panel_Go = wx.Button(self.Panel_PDFManipulator, wx.ID_ANY, "Go")
+        # Added as wxglade does not do it
+        self.Label_Split_Info = wx.StaticText(self.Notebook_Split, wx.ID_ANY, "")
 
         self.__set_properties()
         self.__do_layout()
@@ -68,6 +75,7 @@ class Frame_PDFManipulator(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.Event_Button_Encrypt_InputFile, self.Button_Encrypt_InputFile)
         self.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.Event_Notebook_Page_Changed, self.Notebook_Panel)
         self.Bind(wx.EVT_BUTTON, self.Event_Button_Panel_OutputFile, self.Button_Panel_OutputFile)
+        self.Bind(wx.EVT_BUTTON, self.Event_Button_Panel_Go, self.Button_Panel_Go)
         # end wxGlade
 
     def __set_properties(self):
@@ -114,8 +122,8 @@ class Frame_PDFManipulator(wx.Frame):
         Label_Split_EndPage.SetMinSize((73, -1))
         Sizer_Split_Pages_Selection.Add(Label_Split_EndPage, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT, 5)
         Sizer_Split_Pages_Selection.Add(self.Text_Split_EndPage, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-        Label_Split_Info = wx.StaticText(self.Notebook_Split, wx.ID_ANY, "There are x number of pages in this PDF")
-        Sizer_Split_Pages_Selection.Add(Label_Split_Info, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+        #Label_Split_Info = wx.StaticText(self.Notebook_Split, wx.ID_ANY, "There are x number of pages in this PDF")
+        Sizer_Split_Pages_Selection.Add(self.Label_Split_Info, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
         Sizer_Split_Pages.Add(Sizer_Split_Pages_Selection, 1, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
         Sizer_Split_Pages_OutputOptions.Add(self.Radiobox_Split_OutputOptions, 2, wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT | wx.RIGHT, 5)
         Sizer_Split_Pages.Add(Sizer_Split_Pages_OutputOptions, 1, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
@@ -166,15 +174,30 @@ class Frame_PDFManipulator(wx.Frame):
         # end wxGlade
 
     def Menu_About(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Menu_About' not implemented!")
+        dialog = wx.MessageDialog(self,f'PDFManipulator Version: {PROGRAM_VERSION} \n\nCreated By: Ashley Butler \nLicenced under GNU General Public License v3.0',caption = "About...",style = wx.OK | wx.ICON_INFORMATION)
+        dialog.ShowModal()
         event.Skip()
 
     def Menu_Quit(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Menu_Quit' not implemented!")
+        self.Destroy()
         event.Skip()
 
     def Event_Button_Split_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Split_InputFile' not implemented!")
+        # show file selection, then put file path and name into Text_Split_InputFile
+        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+        	# if the cancel button was pressed - do nothing and return
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	
+        	# put the file path into the text control
+        	pathname = fileDialog.GetPath()
+        	self.Text_Split_InputFile.SetValue(pathname)
+        	# get the number of pages an update the label
+        	pages = get_pages(pathname)
+        	self.Label_Split_Info.SetLabel(f'There are {pages} pages in this PDF')
+        	#print(dir(self))
+        	
+        
         event.Skip()
 
     def Event_Button_Join_SelectFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -206,11 +229,67 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Event_Notebook_Page_Changed(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Notebook_Page_Changed' not implemented!")
+        #NOTEBOOK_FOCUS = self.Notebook_Panel.GetPageText(event.GetSelection())
+        #print(NOTEBOOK_FOCUS)
         event.Skip()
 
     def Event_Button_Panel_OutputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Panel_OutputFile' not implemented!")
+        with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	# enter file name into output text box
+        	pathname = fileDialog.GetPath()
+        	
+        	#print(pathname.lower())
+        	# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
+        	#if pathname.lower()[-4:] != ".pdf":
+        	#	pathname = ''.join([pathname,".pdf"])
+        	self.Text_Panel_SelectOutputFile.SetValue(pathname)
+        	
+        event.Skip()
+        
+    def Event_Button_Panel_Go(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
+    	# get which page currently has focus so that we can split execution into the relevant sections
+        NotebookPage = self.Notebook_Panel.GetPageText(self.Notebook_Panel.GetSelection())
+        print(self.Text_Split_InputFile.GetValue())
+        if NotebookPage == "Split":
+        	# pick up the values of each relevant section
+        	InputFile = self.Text_Split_InputFile.GetValue()
+        	OutputFile = self.Text_Panel_SelectOutputFile.GetValue()
+        	Pages = [self.Text_Split_StartPage.GetValue(),self.Text_Split_EndPage.GetValue()]
+        	OutputFileChoice = self.Radiobox_Split_OutputOptions.GetSelection()
+        	
+        	# need to do some validation and processing
+        	# a file is missing so halt
+        	if InputFile == "" or OutputFile == "":
+        		dialog = wx.MessageDialog(self,f'Plese select a file to split, or a file to save the split file to',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        		
+        	maxpages = get_pages(InputFile)	
+        	# adjust Pages as can allow blank selections
+        	if Pages[0] == "":
+        		Pages[0] = 1
+        		
+        	if Pages[1] == "":
+        		Pages[1] = maxpages
+        		
+        	# check pages to ensure they are sane
+        	try:
+        		Pages = [int(Pages[0]),int(Pages[1])]
+        	except:
+        		dialog = wx.MessageDialog(self,f'Page Numbers are not numeric',caption = "Page Number Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	# check page number boundaries don't exceed pdf boundaries
+        	if (Pages[0] < 1) or (Pages[1] > maxpages) or (Pages[0] > maxpages) or (Pages[1] < 1):
+        		dialog = wx.MessageDialog(self,f'Page number selection should be between 1 and {maxpages}',caption = "Page Selection Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	
+        	# validation passed	
+        	split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice)
+        	
         event.Skip()
 
 # end of class Frame_PDFManipulator

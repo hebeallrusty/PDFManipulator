@@ -74,7 +74,8 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	version = pdf.pdf_version
 	print(f'PDF Version {version}')
 	
-	filename = get_filename(PDF_FILE) # for the output	
+	#filename = get_filename(PDF_FILE) # for the output	
+	filename=""
 	
 	 # initiate pdf_writer object - needed for ranges
 	# cycle through every page and add it to a writer object
@@ -147,24 +148,20 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 		docmeta['xmp:CreatorTool'] = pdf_creator()
 	doc.save(OUT_FILENAME,min_version=version)
 
-##### Testing ######
 
-pdffile = '/home/ashley/Astronomical Algorithms.pdf'
-outdir = '/home/ashley/PDFManipulator/test/'
-pdffiles = []
-for i in range (1,10):
-	pdffiles.append(f'/home/ashley/PDFManipulator/test/Astronomical Algorithms({i}).pdf')
-pdffiles.append('/home/ashley/PDFManipulator/test/OUTPUT.pdf')
-outfile = '/home/ashley/PDFManipulator/test/OUTPUT.pdf'
-
-folder = '/home/ashley/PDFManipulator/test'
 
 #print(get_pages(pdffile))
 #print(get_docinfo('/home/ashley/PDFManipulator/test/Astronomical Algorithms(1).pdf'))
 #split(pdffile,outdir,(1,10),True)
 #splittest(pdffile,outdir,(1,10))
 #get_filename(pdffile)
-join(folder,outfile,True)
+#join(folder,outfile,True)
 #files_in_folder(folder)
 #print(get_docinfo(outfile))
 #print(pdf_datetime())
+
+        # produce dialog box with program details
+        #dialog = wx.MessageDialog(self,f"PDFManipulator Version: {PROMGRAM_VERSION} \n" \
+        #			f"Created by Ashley Butler \n" \
+        #			f"Licenced under GNU General Public License v3.0", caption = "About...", style = wx.OK|wx.ICON_INFORMATION)
+        #dialog.ShowModal()
