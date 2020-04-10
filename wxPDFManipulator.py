@@ -186,8 +186,16 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Menu_Check_for_Update(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
+    	# master branch has a version file which contains the latest version number
+    	# may need to check for 404 error if network isn't available
         page = requests.get(URL)
         print(page.text)
+        if int(PROGRAM_VERSION) < int(page.text):
+        	dialog = wx.MessageDialog(self,f'New Version available: {page.text} \nCurrent Version: {PROGRAM_VERSION}',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
+        	dialog.ShowModal()
+        else:
+        	dialog = wx.MessageDialog(self,f'No newer version available',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
+        	dialog.ShowModal()
         event.Skip()
 
     def Event_Button_Split_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
