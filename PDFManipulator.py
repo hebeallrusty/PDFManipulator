@@ -4,8 +4,14 @@ import os
 import datetime as dt
 import pikepdf
 
-PROGRAM_DATE = '20200403'
+PROGRAM_DATE = 20200403
 
+def version():
+	return PROGRAM_DATE
+
+def swap_item(alist,pos1,pos2):
+	alist[pos1],alist[pos2] = alist[pos2],alist[pos1]
+	return alist
 
 def get_pages(PDF_FILE):
 	pdf = pikepdf.Pdf.open(PDF_FILE)

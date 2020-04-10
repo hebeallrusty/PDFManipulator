@@ -6,6 +6,7 @@
 
 import wx
 from PDFManipulator import *
+import requests
 # begin wxGlade: dependencies
 # end wxGlade
 
@@ -13,9 +14,9 @@ from PDFManipulator import *
 # end wxGlade
 
 
-PROGRAM_VERSION = '20200403'
+PROGRAM_VERSION = version()
 FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF"
-
+URL = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
 
 
 class Frame_PDFManipulator(wx.Frame):
@@ -32,6 +33,8 @@ class Frame_PDFManipulator(wx.Frame):
         self.Bind(wx.EVT_MENU, self.Menu_About, id=item.GetId())
         item = wxglade_tmp_menu.Append(wx.ID_ANY, "&Quit", "")
         self.Bind(wx.EVT_MENU, self.Menu_Quit, id=item.GetId())
+        item = wxglade_tmp_menu.Append(wx.ID_ANY, "&Check for Update", "")
+        self.Bind(wx.EVT_MENU, self.Menu_Check_for_Update, id=item.GetId())
         self.Menu.Append(wxglade_tmp_menu, "&Menu")
         self.SetMenuBar(self.Menu)
         # Menu Bar end
@@ -46,7 +49,7 @@ class Frame_PDFManipulator(wx.Frame):
         self.Notebook_Join = wx.Panel(self.Notebook_Panel, wx.ID_ANY)
         self.Button_Join_SelectFile = wx.Button(self.Notebook_Join, wx.ID_ANY, "Select File(s)")
         self.Button_Join_SelectFolder = wx.Button(self.Notebook_Join, wx.ID_ANY, "Select Folder")
-        self.Listbox_Join_Files = wx.ListBox(self.Notebook_Join, wx.ID_ANY, choices=[], style=wx.LB_EXTENDED | wx.LB_HSCROLL | wx.LB_NEEDED_SB)
+        self.Listbox_Join_Files = wx.ListBox(self.Notebook_Join, wx.ID_ANY, choices=[], style= wx.LB_HSCROLL | wx.LB_NEEDED_SB)
         self.Button_Join_Up = wx.Button(self.Notebook_Join, wx.ID_ANY, u"↑")
         self.Button_Join_Down = wx.Button(self.Notebook_Join, wx.ID_ANY, u"↓")
         self.Button_Join_Remove = wx.Button(self.Notebook_Join, wx.ID_ANY, "Remove")
@@ -174,7 +177,7 @@ class Frame_PDFManipulator(wx.Frame):
         # end wxGlade
 
     def Menu_About(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        dialog = wx.MessageDialog(self,f'PDFManipulator Version: {PROGRAM_VERSION} \n\nCreated By: Ashley Butler \nLicenced under GNU General Public License v3.0',caption = "About...",style = wx.OK | wx.ICON_INFORMATION)
+        dialog = wx.MessageDialog(self,f'PDFManipulator Version: {PROGRAM_VERSION} \n\nCreated By: Ashley Butler \nLicenced under GNU General Public License v3.0 \n\nUtilises the pikepdf library licenced under Mozilla Public License 2.0',caption = "About...",style = wx.OK | wx.ICON_INFORMATION)
         dialog.ShowModal()
         event.Skip()
 
@@ -182,9 +185,14 @@ class Frame_PDFManipulator(wx.Frame):
         self.Destroy()
         event.Skip()
 
+    def Menu_Check_for_Update(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
+        page = requests.get(URL)
+        print(page.text)
+        event.Skip()
+
     def Event_Button_Split_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
         	# if the cancel button was pressed - do nothing and return
         	if fileDialog.ShowModal() == wx.ID_CANCEL:
         		return
@@ -201,11 +209,37 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Event_Button_Join_SelectFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Join_SelectFile' not implemented!")
+        # show file selection, then put file path and name into Text_Split_InputFile
+        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR | wx.FD_MULTIPLE) as fileDialog:
+        	# if the cancel button was pressed - do nothing and return
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	# multiple files may have been selected so use GetPath*s* - return is a list of file names
+        	pathnames = fileDialog.GetPaths()
+        	
+        # populate the list box. Ensure that items are added at the end of the list
+       	self.Listbox_Join_Files.InsertItems(pathnames,self.Listbox_Join_Files.GetCount())
+        		
+        
         event.Skip()
 
     def Event_Button_Join_SelectFolder(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Join_SelectFolder' not implemented!")
+        # show folder selection - additional processing requried to get the pdf files
+        with wx.DirDialog(self,"Choose folder of PDF files",style = wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST) as dirDialog:
+        	# return if cancel button was pressed
+        	if dirDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        		
+        	# get the directory - no PDF files are listed so request all pdf files in that folder
+        dirname = dirDialog.GetPath()
+        pathnames = files_in_folder(dirname)
+        # print(pathnames)
+        # return if there are no pdf's in the directory
+        if not pathnames:
+        	return
+        # populate the list box - items to be added at the end
+        self.Listbox_Join_Files.InsertItems(pathnames,self.Listbox_Join_Files.GetCount())
+        	
         event.Skip()
 
     def Event_Listbox_Join_Files(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -213,15 +247,73 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Event_Button_Join_Up(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Join_Up' not implemented!")
+        selecteditem = self.Listbox_Join_Files.GetSelection()
+        # if we haven't selected anything (-1) or are on the first item in the list (0) then return
+        if (self.Listbox_Join_Files.GetSelection() <= 0):
+        	return
+        # produce a list of all items in the listbox
+        listboxitems = [self.Listbox_Join_Files.GetString(i) for i in range(0,self.Listbox_Join_Files.GetCount())]
+        # Listbox needs clearing and starting again now that we have all the items
+        self.Listbox_Join_Files.Clear()
+        # insert new list items with the two items swaped over
+        self.Listbox_Join_Files.InsertItems(swap_item(listboxitems,selecteditem,selecteditem - 1),0)
+        # update the listbox
+        self.Listbox_Join_Files.Update()
+        # move the focus to the newly moved item
+        self.Listbox_Join_Files.SetSelection(selecteditem - 1)
+        #print(listboxitems)
         event.Skip()
 
     def Event_Button_Join_Down(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Join_Down' not implemented!")
+        selecteditem = self.Listbox_Join_Files.GetSelection()
+        maxitem = self.Listbox_Join_Files.GetCount()
+        #print(maxitem)
+        # if we haven't selected anything (-1) or are on the last item in the list (maxitem - 1 due to 0 indexing) then return
+        if (self.Listbox_Join_Files.GetSelection() == -1) or (self.Listbox_Join_Files.GetSelection() == maxitem - 1):
+        	return
+        # produce a list of all items in the listbox
+        listboxitems = [self.Listbox_Join_Files.GetString(i) for i in range(0,maxitem)]
+        # Listbox needs clearing and starting again now that we have all the items
+        self.Listbox_Join_Files.Clear()
+        # insert new list items with the two items swaped over
+        self.Listbox_Join_Files.InsertItems(swap_item(listboxitems,selecteditem,selecteditem + 1),0)
+        # update the listbox
+        self.Listbox_Join_Files.Update()
+        # move the focus to the newly moved item
+        self.Listbox_Join_Files.SetSelection(selecteditem + 1)
+        #print(listboxitems)
         event.Skip()
 
     def Event_Button_Join_Remove(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Join_Remove' not implemented!")
+        # if the listbox is empty or there is nothing selected - return
+        maxitem = self.Listbox_Join_Files.GetCount()
+        selecteditem = self.Listbox_Join_Files.GetSelection()
+        print(f'selected {selecteditem}. max item {maxitem}')
+        if (maxitem == 0) or (selecteditem == -1):
+        	return
+        # get all the items in the listbox
+        listboxitems = [self.Listbox_Join_Files.GetString(i) for i in range(0,maxitem)]
+        # clear listbox
+        self.Listbox_Join_Files.Clear()
+        del listboxitems[selecteditem]
+        # delete the item that was selected and reinsert the list into the listbox
+        # check that we are not trying to insert an empty list into the listbox
+        if maxitem == 1:
+        	return
+        self.Listbox_Join_Files.InsertItems(listboxitems,0)
+        self.Listbox_Join_Files.Update()
+        
+        
+        
+        # move focus to the item above
+
+        if maxitem - 1 == 1:
+        	self.Listbox_Join_Files.SetSelection(0)
+        	return
+        elif selecteditem + 1 == maxitem:
+        	self.Listbox_Join_Files.SetSelection(selecteditem - 1)
+        else:
+        	self.Listbox_Join_Files.SetSelection(selecteditem)
         event.Skip()
 
     def Event_Button_Encrypt_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -242,8 +334,8 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	#print(pathname.lower())
         	# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
-        	#if pathname.lower()[-4:] != ".pdf":
-        	#	pathname = ''.join([pathname,".pdf"])
+        	if pathname.lower()[-4:] != ".pdf":
+        		pathname = ''.join([pathname,".pdf"])
         	self.Text_Panel_SelectOutputFile.SetValue(pathname)
         	
         event.Skip()
@@ -251,18 +343,19 @@ class Frame_PDFManipulator(wx.Frame):
     def Event_Button_Panel_Go(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
     	# get which page currently has focus so that we can split execution into the relevant sections
         NotebookPage = self.Notebook_Panel.GetPageText(self.Notebook_Panel.GetSelection())
+        OutputFile = self.Text_Panel_SelectOutputFile.GetValue()
         print(self.Text_Split_InputFile.GetValue())
         if NotebookPage == "Split":
         	# pick up the values of each relevant section
         	InputFile = self.Text_Split_InputFile.GetValue()
-        	OutputFile = self.Text_Panel_SelectOutputFile.GetValue()
+        	
         	Pages = [self.Text_Split_StartPage.GetValue(),self.Text_Split_EndPage.GetValue()]
         	OutputFileChoice = self.Radiobox_Split_OutputOptions.GetSelection()
         	
         	# need to do some validation and processing
         	# a file is missing so halt
         	if InputFile == "" or OutputFile == "":
-        		dialog = wx.MessageDialog(self,f'Plese select a file to split, or a file to save the split file to',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog = wx.MessageDialog(self,f'Plese select a file to split, or a file to save to',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
         		dialog.ShowModal()
         		return
         		
@@ -287,9 +380,33 @@ class Frame_PDFManipulator(wx.Frame):
         		dialog.ShowModal()
         		return
         	
-        	# validation passed	
-        	split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice)
+        	# validation passed		
         	
+        	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
+        	OutputFile = OutputFile[:-4]
+        	#print(OutputFile)
+        	
+        	
+        	split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice)
+        	# let the user know that the process has completed
+        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        	dialog.ShowModal()
+        elif NotebookPage == 'Join':
+        	maxitem = self.Listbox_Join_Files.GetCount()
+        	if maxitem == 0:
+        		return
+        	# check that we have selected an output file
+        	if OutputFile == "":
+        		dialog = wx.MessageDialog(self,f'Plese select a file to save to',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	# validation complete - get all the list items
+        	listbox = [self.Listbox_Join_Files.GetString(i) for i in range(0,maxitem)]
+        	
+        	join(listbox,OutputFile)
+         	# let the user know that the process has completed
+        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        	dialog.ShowModal()       	
         event.Skip()
 
 # end of class Frame_PDFManipulator
