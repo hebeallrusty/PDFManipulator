@@ -7,6 +7,7 @@
 import wx
 from PDFManipulator import *
 import requests
+from Icon import *
 # begin wxGlade: dependencies
 # end wxGlade
 
@@ -17,7 +18,7 @@ import requests
 PROGRAM_VERSION = version()
 FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF"
 URL = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
-
+ENCRYPTION_STRENGTH = {0:6,1:4,2:3,3:2} # mapped to pikepdf levels
 
 class Frame_PDFManipulator(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -25,6 +26,8 @@ class Frame_PDFManipulator(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((640, 480))
+        # add icon
+        self.SetIcon(PDFIcon256.GetIcon())
         
         # Menu Bar
         self.Menu = wx.MenuBar()
@@ -58,7 +61,7 @@ class Frame_PDFManipulator(wx.Frame):
         self.Button_Encrypt_InputFile = wx.Button(self.Notebook_Encrypt, wx.ID_ANY, "...")
         self.Text_Encrypt_Password1 = wx.TextCtrl(self.Notebook_Encrypt, wx.ID_ANY, "", style=wx.TE_PASSWORD)
         self.Text_Encrypt_Password2 = wx.TextCtrl(self.Notebook_Encrypt, wx.ID_ANY, "", style=wx.TE_PASSWORD)
-        self.Radiobox_Encrypt_Options = wx.RadioBox(self.Notebook_Encrypt, wx.ID_ANY, "Encryption Options", choices=["Strength 1 (Recommended)", "Strength 2", "Strength 3", "Strength 4 (Weakest)"], majorDimension=4, style=wx.RA_SPECIFY_ROWS)
+        self.Radiobox_Encrypt_Options = wx.RadioBox(self.Notebook_Encrypt, wx.ID_ANY, "Encryption Options", choices=["Strength 1 (Strongest)", "Strength 2 (Weakest)"], majorDimension=2, style=wx.RA_SPECIFY_ROWS)
         self.Text_Panel_SelectOutputFile = wx.TextCtrl(self.Panel_PDFManipulator, wx.ID_ANY, "", style=wx.TE_AUTO_URL | wx.TE_READONLY)
         self.Button_Panel_OutputFile = wx.Button(self.Panel_PDFManipulator, wx.ID_ANY, "...")
         self.Button_Panel_Go = wx.Button(self.Panel_PDFManipulator, wx.ID_ANY, "Go")
@@ -325,7 +328,16 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Event_Button_Encrypt_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Encrypt_InputFile' not implemented!")
+        # show file selection, then put file path and name into Text_Split_InputFile
+        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
+        	# if the cancel button was pressed - do nothing and return
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	
+        	# put the file path into the text control
+        	pathname = fileDialog.GetPath()
+        	self.Text_Encrypt_InputFile.SetValue(pathname)
+
         event.Skip()
 
     def Event_Notebook_Page_Changed(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -414,7 +426,36 @@ class Frame_PDFManipulator(wx.Frame):
         	join(listbox,OutputFile)
          	# let the user know that the process has completed
         	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
-        	dialog.ShowModal()       	
+        	dialog.ShowModal()      
+        if NotebookPage == "Encrypt":
+            # pick up the values of each relevant section
+        	InputFile = self.Text_Encrypt_InputFile.GetValue()
+        	EncryptionStrength = ENCRYPTION_STRENGTH[self.Radiobox_Encrypt_Options.GetSelection()]
+			# don't store passwords in memory as a variable - direct compare the values without storage
+			
+			# a file is missing so halt
+        	if InputFile == "" or OutputFile =="":
+        		dialog = wx.MessageDialog(self,f'Plese select a file to encrypt, or a file to save to',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	
+
+        	#print(self.Text_Encrypt_Password1.GetValue())	
+        	# check if the passwords match
+        	if self.Text_Encrypt_Password1.GetValue() != self.Text_Encrypt_Password2.GetValue():
+        		dialog = wx.MessageDialog(self,f'Passwords don\'t match',caption = "Password Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	
+        	# validation complete
+        	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
+        	OutputFile = OutputFile[:-4]
+        	encrypt(InputFile,OutputFile,self.Text_Encrypt_Password1.GetValue(),EncryptionStrength)
+			# let the user know that the process has completed
+        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        	dialog.ShowModal()
+
+        	#print(EncryptionStrength)
         event.Skip()
 
 # end of class Frame_PDFManipulator

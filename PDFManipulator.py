@@ -154,6 +154,29 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 		docmeta['xmp:CreatorTool'] = pdf_creator()
 	doc.save(OUT_FILENAME,min_version=version)
 
+def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
+	# open pdf file
+	
+	print(f'Opening {PDF_FILE}')
+	pdf = pikepdf.Pdf.open(PDF_FILE)
+	print(f'Getting Document Properties')
+	meta = get_docinfo(PDF_FILE)
+	version = pdf.pdf_version
+	pages = get_pages(PDF_FILE)
+	print(f'PDF Version {version}')	
+	# create new output object
+	doc = pikepdf.Pdf.new()
+	# pikepdf produces pages as lists, so use a slicer to extend into empty document
+	print(f'Inserting {pages} page(s)')
+	#		doc.pages.extend(pdf.pages[PageRange[0]-1 :PageRange[1]])
+	doc.pages.extend(pdf.pages[0 : pages])
+	#update the metadata of the output so it matches that of the original
+	copy_meta(meta,doc)
+	
+	output = f'{OUT_FILENAME}.pdf'
+	no_extracting = pikepdf.Permissions(extract=False)
+	print(f'Writing file {output}')
+	doc.save(output,min_version=version,encryption = pikepdf.Encryption(user = Password, owner = Password[::-1], R=Strength, allow=no_extracting))
 
 
 #print(get_pages(pdffile))
@@ -165,9 +188,11 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 #files_in_folder(folder)
 #print(get_docinfo(outfile))
 #print(pdf_datetime())
-
-        # produce dialog box with program details
-        #dialog = wx.MessageDialog(self,f"PDFManipulator Version: {PROMGRAM_VERSION} \n" \
-        #			f"Created by Ashley Butler \n" \
-        #			f"Licenced under GNU General Public License v3.0", caption = "About...", style = wx.OK|wx.ICON_INFORMATION)
-        #dialog.ShowModal()
+#passwd = wx.PasswordEntryDialog(None, "Whats the  password", 'Password','',style=wx.TextEntryDialogStyle)
+#        	ans = passwd.ShowModal()
+#        	if ans == wx.ID_OK:
+#        		entered_password = passwd.GetValue()
+#        	else:
+#        		entered_password = False
+#        	print("password ", entered_password)
+#        	passwd.Destroy()	
