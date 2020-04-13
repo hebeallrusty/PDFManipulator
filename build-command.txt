@@ -1,0 +1,1 @@
+pyinstaller --onefile --upx-dir C:\Users\Ashley\Downloads\upx-3.96-win64 --icon=C:\Users\Ashley\Desktop\PDFManipulator-20200403\icon\iconfinder_24_2258459_650_icon.ico --name PDFManipulator.exe C:\Users\Ashley\Desktop\PDFManipulator-20200403\wxPDFManipulator.py 

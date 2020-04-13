@@ -240,9 +240,7 @@ class Frame_PDFManipulator(wx.Frame):
         	# return if cancel button was pressed
         	if dirDialog.ShowModal() == wx.ID_CANCEL:
         		return
-        		
-        	# get the directory - no PDF files are listed so request all pdf files in that folder
-        dirname = dirDialog.GetPath()
+        	dirname = dirDialog.GetPath()
         pathnames = files_in_folder(dirname)
         # print(pathnames)
         # return if there are no pdf's in the directory

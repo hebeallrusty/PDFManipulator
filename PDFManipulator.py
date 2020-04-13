@@ -3,6 +3,7 @@ import platform
 import os
 import datetime as dt
 import pikepdf
+from pikepdf import _cpphelpers
 
 PROGRAM_DATE = 20200403
 
