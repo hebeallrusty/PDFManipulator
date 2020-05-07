@@ -17,8 +17,10 @@ from Icon import *
 
 PROGRAM_VERSION = version()
 FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF"
-URL = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
+URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
 ENCRYPTION_STRENGTH = {0:6,1:4,2:3,3:2} # mapped to pikepdf levels
+
+
 
 class Frame_PDFManipulator(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -27,17 +29,17 @@ class Frame_PDFManipulator(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((640, 480))
         # add icon
-        self.SetIcon(PDFIcon256.GetIcon())
-        
+        self.SetIcon(PDFIcon64.GetIcon())
+
         # Menu Bar
         self.Menu = wx.MenuBar()
         wxglade_tmp_menu = wx.Menu()
         item = wxglade_tmp_menu.Append(wx.ID_ANY, "&About", "")
         self.Bind(wx.EVT_MENU, self.Menu_About, id=item.GetId())
-        item = wxglade_tmp_menu.Append(wx.ID_ANY, "&Quit", "")
-        self.Bind(wx.EVT_MENU, self.Menu_Quit, id=item.GetId())
         item = wxglade_tmp_menu.Append(wx.ID_ANY, "&Check for Update", "")
         self.Bind(wx.EVT_MENU, self.Menu_Check_for_Update, id=item.GetId())
+        item = wxglade_tmp_menu.Append(wx.ID_ANY, "&Quit", "")
+        self.Bind(wx.EVT_MENU, self.Menu_Quit, id=item.GetId())
         self.Menu.Append(wxglade_tmp_menu, "&Menu")
         self.SetMenuBar(self.Menu)
         # Menu Bar end
@@ -191,14 +193,20 @@ class Frame_PDFManipulator(wx.Frame):
     def Menu_Check_for_Update(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
     	# master branch has a version file which contains the latest version number
     	# may need to check for 404 error if network isn't available
-        page = requests.get(URL)
-        print(page.text)
-        if int(PROGRAM_VERSION) < int(page.text):
-        	dialog = wx.MessageDialog(self,f'New Version available: {page.text} \nCurrent Version: {PROGRAM_VERSION}',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
+        page = requests.get(URL_CHECK_UPDATE)
+        pagestatus = page.status_code
+        # status codes are the http codes. Anything 400 and above is an error (4xx Client error; 5xx Server error). Let user know unable to check for error
+        if (pagestatus >= 400):
+        	dialog = wx.MessageDialog(self,f'Unable to check for an update. Webpage is not available ({pagestatus} error)', style = wx.OK | wx.ICON_ERROR)
         	dialog.ShowModal()
-        else:
-        	dialog = wx.MessageDialog(self,f'No newer version available',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
-        	dialog.ShowModal()
+        else: # must have got a valid response
+        	print(page.text)
+        	if int(PROGRAM_VERSION) < int(page.text):
+        		dialog = wx.MessageDialog(self,f'New Version available: {page.text} \nCurrent Version: {PROGRAM_VERSION}',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
+        		dialog.ShowModal()
+        	else:
+        		dialog = wx.MessageDialog(self,f'No newer version available',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
+        		dialog.ShowModal()
         event.Skip()
 
     def Event_Button_Split_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -393,7 +401,7 @@ class Frame_PDFManipulator(wx.Frame):
         		dialog.ShowModal()
         		return
         	# check page number boundaries don't exceed pdf boundaries
-        	if (Pages[0] < 1) or (Pages[1] > maxpages) or (Pages[0] > maxpages) or (Pages[1] < 1):
+        	if (Pages[0] < 1) or (Pages[1] > maxpages) or (Pages[0] > maxpages) or (Pages[1] < 1) or (Pages[0] > Pages[1]):
         		dialog = wx.MessageDialog(self,f'Page number selection should be between 1 and {maxpages}',caption = "Page Selection Error",style = wx.OK | wx.ICON_ERROR)
         		dialog.ShowModal()
         		return
@@ -409,6 +417,7 @@ class Frame_PDFManipulator(wx.Frame):
         	# let the user know that the process has completed
         	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
         	dialog.ShowModal()
+        	
         elif NotebookPage == 'Join':
         	maxitem = self.Listbox_Join_Files.GetCount()
         	if maxitem == 0:
@@ -457,6 +466,7 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
 # end of class Frame_PDFManipulator
+
 
 class MyApp(wx.App):
     def OnInit(self):

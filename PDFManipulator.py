@@ -5,7 +5,7 @@ import datetime as dt
 import pikepdf
 from pikepdf import _cpphelpers
 
-PROGRAM_DATE = 20200403
+PROGRAM_DATE = 20200507
 
 def version():
 	return PROGRAM_DATE
@@ -84,7 +84,7 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	#filename = get_filename(PDF_FILE) # for the output	
 	filename=""
 	
-	 # initiate pdf_writer object - needed for ranges
+	# initiate pdf_writer object - needed for ranges
 	# cycle through every page and add it to a writer object
 
 	if dismantle == True:
@@ -116,7 +116,7 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 		#update the metadata of the output so it matches that of the original
 		copy_meta(meta,doc)
 	
-		output = f'{OUT_DIR}{filename}({PageRange[0]}-{PageRange[1]}).pdf'
+		output = f'{OUT_DIR}{filename}.pdf'
 		print(f'Writing file {output}')
 		doc.save(output,min_version=version)
 		
@@ -179,9 +179,49 @@ def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
 	print(f'Writing file {output}')
 	doc.save(output,min_version=version,encryption = pikepdf.Encryption(user = Password, owner = Password[::-1], R=Strength, allow=no_extracting))
 
+def emplace(PDF_FILE,OUT_FILENAME,Subs,Page):
+	# substitute pages in PDF_FILE for those in Subs.
+	
+	# initiate the new pdf object which will be the output
+	#doc = pikepdf.Pdf.new()
+	print(f'Opening {PDF_FILE}')
+	pdf = pikepdf.Pdf.open(PDF_FILE)
+	subpdf = pikepdf.Pdf.open(Subs)
+	print(f'Getting Document Properties')
+	meta = get_docinfo(PDF_FILE)
+	version = pdf.pdf_version
+	pages = [get_pages(PDF_FILE),get_pages(Subs)]
+	print(f'Pages: {pages} Version: {version}')
+	
+	# Check if the replacement pages exceeds the end of the document
+	if pages[1] + Page > pages[0]:
+		print(f'Replacement pages exceeds the original document pages')
+	
+	# replace pages
+	print(pdf.pages[0].objgen)
+	pdf.pages[Page].emplace(subpdf.pages[0])
+	
+	#doc.pages.extend(pdf.pages)
+	print(doc.pages[0].objgen)
+	
+	#update the metadata of the output so it matches that of the original
+	#copy_meta(meta,doc)
+
+	# create filename and save		
+	output = f'{OUT_FILENAME}.pdf'
+	print(f'Writing file {output}')
+	#doc.save(output,min_version=version)	
+	pdf.save(output)
+
+# TESTS
+PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
+subpdf = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
+OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced'
+
+emplace(PDF,OutputFile,subpdf,1)
 
 #print(get_pages(pdffile))
-#print(get_docinfo('/home/ashley/PDFManipulator/test/Astronomical Algorithms(1).pdf'))
+
 #split(pdffile,outdir,(1,10),True)
 #splittest(pdffile,outdir,(1,10))
 #get_filename(pdffile)
