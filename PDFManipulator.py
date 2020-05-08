@@ -7,6 +7,7 @@ from pikepdf import _cpphelpers
 
 PROGRAM_DATE = 20200507
 
+
 def version():
 	return PROGRAM_DATE
 
@@ -19,18 +20,37 @@ def get_pages(PDF_FILE):
 	return len(pdf.pages)
 
 def get_docinfo(PDF_FILE):
+	# open the pdf file
 	pdf = pikepdf.Pdf.open(PDF_FILE)
+	
+	# if there is an xmp metadata, get it, if the file is older then opening the meta with pikepdf will create a blank xmp metadata
 	meta = pdf.open_metadata()
 
-	#for key in meta:
+	# need to test if the meta is "blank". If it is then the meta is in docinfo. We don't want to copy the docinfo to xmp if the xmp is already there as it'll trash some of the metadata and the goal is to keep as much as possible.
+	
+	# set a test to see if there are any keys in the meta. They should only be present if there is prior xmp metadata and not just the blank xmp from pikepdf
+	metakeys = 0
+	#print(META)
+	for key in meta:
+		# only prior xmp metadata will achieve this execution, so flag that it is proper xmp meta
+		metakeys = 1
+		# lets not waste any cpu cycles
+		#print(f'{key}:{meta[key]}')
+		break
 		
-	#	print(f'{key}:{meta[key]}')
+	# now check if we have flagged xmp or docinfo meta
+	if metakeys == 0:
+		# there was no xmp meta, so we want to copy the docinfo over to xmp so that we can keep that later on. Can only update meta with a WITH block
+		with meta as META:
+			META.load_from_docinfo(pdf.docinfo)		
+	
 	return meta
+	
 
 def get_filename(PDF_FILE):
 	# check which system we are running as this governs the directory name delimiter
 	if platform.system() == 'Windows':
-		dir_char = '/'
+		dir_char = '\\'
 	else:
 		dir_char = '/'
 	print(f'Program running on {platform.system()} and directory character = {dir_char}')
@@ -46,19 +66,27 @@ def files_in_folder(FOLDER):
 def copy_meta(SrcMeta,DocObj):
 	# DocObj is the new pdf with blank meta
 	# SrcMeta is the meta object from the source pdf
+	#print(SrcMeta)
 	
 	# open meta as writeable for new pdf
 	with DocObj.open_metadata() as meta:
+		#meta.load_from_docinfo()
 		#cycle through each key in the Source meta, and write that into the new blank file
 		for key in SrcMeta:
+			#print(f'key: {key} ; meta:{SrcMeta[key]}')
 			meta[key] = SrcMeta[key]
 		# alter the Modified Date
 		meta['xmp:ModifyDate'] = pdf_timestamp()
 		meta['xmp:CreatorTool'] = pdf_creator()
+		meta['pdf:Producer'] = pdf_producer()
 	
 def pdf_creator():
 	return f'PDFManipulator {PROGRAM_DATE}'
 	
+def pdf_producer():
+	PIKEPDF_VER = pikepdf.__version__
+	return f'pikepdf {PIKEPDF_VER}'
+
 def pdf_timestamp():
 	# generate PDF timestamp relative to utc time
 	# timestamp format 2010-11-27T13:41:17+01:00
@@ -160,71 +188,66 @@ def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
 	
 	print(f'Opening {PDF_FILE}')
 	pdf = pikepdf.Pdf.open(PDF_FILE)
-	print(f'Getting Document Properties')
-	meta = get_docinfo(PDF_FILE)
-	version = pdf.pdf_version
-	pages = get_pages(PDF_FILE)
-	print(f'PDF Version {version}')	
-	# create new output object
-	doc = pikepdf.Pdf.new()
-	# pikepdf produces pages as lists, so use a slicer to extend into empty document
-	print(f'Inserting {pages} page(s)')
-	#		doc.pages.extend(pdf.pages[PageRange[0]-1 :PageRange[1]])
-	doc.pages.extend(pdf.pages[0 : pages])
-	#update the metadata of the output so it matches that of the original
-	copy_meta(meta,doc)
+
 	
 	output = f'{OUT_FILENAME}.pdf'
 	no_extracting = pikepdf.Permissions(extract=False)
 	print(f'Writing file {output}')
-	doc.save(output,min_version=version,encryption = pikepdf.Encryption(user = Password, owner = Password[::-1], R=Strength, allow=no_extracting))
+	pdf.save(output,encryption = pikepdf.Encryption(user = Password, owner = Password[::-1], R=Strength, allow=no_extracting))
 
-def emplace(PDF_FILE,OUT_FILENAME,Subs,Page):
+def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	# substitute pages in PDF_FILE for those in Subs.
+	# Pages are zero indexed (i.e pdf page 1 is Page=0)
 	
-	# initiate the new pdf object which will be the output
-	#doc = pikepdf.Pdf.new()
 	print(f'Opening {PDF_FILE}')
 	pdf = pikepdf.Pdf.open(PDF_FILE)
-	subpdf = pikepdf.Pdf.open(Subs)
-	print(f'Getting Document Properties')
-	meta = get_docinfo(PDF_FILE)
-	version = pdf.pdf_version
-	pages = [get_pages(PDF_FILE),get_pages(Subs)]
+	print(f'Opening {SUBS}')
+	subpdf = pikepdf.Pdf.open(SUBS)
+	version = [pdf.pdf_version,subpdf.pdf_version]
+	pages = [get_pages(PDF_FILE),get_pages(SUBS)]
 	print(f'Pages: {pages} Version: {version}')
 	
 	# Check if the replacement pages exceeds the end of the document
-	if pages[1] + Page > pages[0]:
-		print(f'Replacement pages exceeds the original document pages')
+	#if pages[1] + PAGE > pages[0]:
+	#	print(f'Replacement pages exceeds the original document pages')
 	
-	# replace pages
-	print(pdf.pages[0].objgen)
-	pdf.pages[Page].emplace(subpdf.pages[0])
+	# replace page
+	# add substitue page to end of document (currently just the first page - plan to add extras) into original doc
+	pdf.pages.append(subpdf.pages[0])
+	# carry out the substitution
+	pdf.pages[PAGE].emplace(pdf.pages[-1])
+	# delete the added page
+	del pdf.pages[-1]
 	
-	#doc.pages.extend(pdf.pages)
-	print(doc.pages[0].objgen)
-	
-	#update the metadata of the output so it matches that of the original
-	#copy_meta(meta,doc)
-
 	# create filename and save		
 	output = f'{OUT_FILENAME}.pdf'
 	print(f'Writing file {output}')
-	#doc.save(output,min_version=version)	
-	pdf.save(output)
+	# save the pdf with the greatest pdf version of both files	
+	pdf.save(output,min_version=max(version))
+	
+def TestEncryption(PDF_FILE):
+	try:
+		pdf = pikepdf.Pdf.open(PDF_FILE)
+	except pikepdf._qpdf.PasswordError:
+		return True
+	else:
+		return False
 
 # TESTS
-PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
-subpdf = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
-OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced'
-
-emplace(PDF,OutputFile,subpdf,1)
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/pdf-test.pdf'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
+#OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/TESTTEST.pdf'
+print(TestEncryption(PDF))
+#emplace(PDF,OutputFile,subpdf,1)
 
 #print(get_pages(pdffile))
 
-#split(pdffile,outdir,(1,10),True)
+#split(PDF,OutputFile,(1,1),False)
 #splittest(pdffile,outdir,(1,10))
-#get_filename(pdffile)
+#print(get_filename(PDF))
 #join(folder,outfile,True)
 #files_in_folder(folder)
 #print(get_docinfo(outfile))
