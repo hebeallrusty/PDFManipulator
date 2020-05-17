@@ -95,6 +95,49 @@ def pdf_timestamp():
 	# NEEDS TO BE 4 DIGIT YEAR, 2 DIGIT MOND DAY HOUR MINUTE AND SECOND
 	return f'{NOW.year:04}-{NOW.month:02}-{NOW.day:02}T{NOW.hour:02}:{NOW.minute:02}:{NOW.second:02}+00:00'
 
+def ConvertRanges(INPUT):
+	# Function to convert a page range or list into a proper list i.e. 1-3,5,7 = [1,2,3,5,7]. Similar to print range dialog boxes
+	
+	# spilt the list using the comma as a delimeter. We will be able to iterate over these items to build a proper list containing all the elements
+	InputList = INPUT.split(",")
+	
+	# prime a list for the output
+	OutputList = []
+		
+	# iterate over all the parts
+	for i in InputList:
+	
+		# check if there is a dash - in this context include all items e.g 1-3 = 1,2,3
+		if "-" in i:
+		
+			# check if there is only one range within the item, and if there are more, raise an error
+			if i.count("-") > 1:
+					raise IndexError(f'Only one "-" allowed within a single range, however received {i.count("-")} in item {i}')
+			
+			# now split this string to find out the start and end points
+			iRange = i.split("-")
+			
+			# convert to integers as split will output strings
+			iRange = list(map(int,iRange))
+			
+			# check if starting number is greater than the ending number - range is reversed
+			if iRange[1] < iRange [0]:
+				# forgive the user's mistake and fix what they most likely meant
+				swap_item(iRange,0,1)
+			
+			# create a range to then append each number to the Output
+			for j in range(iRange[0],iRange[1]+1):
+			
+				OutputList.append(j)
+			# we now need to discard this i as it has been parsed and dealt with, so move on to the next iteration
+			continue
+		
+		# add i to the list but convert to an integer
+		OutputList.append(int(i))
+		
+		# potential to sort the list here into numerical order - however this behaviour is to be checked as functions are altered in frontend
+	
+	return OutputList
 
 def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	# PDF_FILE must be a single PDF file
@@ -198,6 +241,7 @@ def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
 def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	# substitute pages in PDF_FILE for those in Subs.
 	# Pages are zero indexed (i.e pdf page 1 is Page=0)
+	# currently only does one page but plan for whole sub document
 	
 	print(f'Opening {PDF_FILE}')
 	pdf = pikepdf.Pdf.open(PDF_FILE)
@@ -225,24 +269,56 @@ def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	# save the pdf with the greatest pdf version of both files	
 	pdf.save(output,min_version=max(version))
 	
-def TestEncryption(PDF_FILE):
+def TestEncryption(PDF_FILE,PASSWORD=""):
+	# check if the file has a password and cannot be opened. Return is True (is encrypted) or False (isn't encrypted or correct password)
+	# default is blank password
+	
+	# An error is raised if the file cannot be opened, so on a Password error return True, otherwise it's false. Any other error should be raised
 	try:
-		pdf = pikepdf.Pdf.open(PDF_FILE)
+		pdf = pikepdf.Pdf.open(PDF_FILE,password = PASSWORD)
 	except pikepdf._qpdf.PasswordError:
 		return True
 	else:
 		return False
+		
+def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
+	# Rotates a Page in the PDF
+	# Pages is a list containing the pages to rotate
+	# Rotation is an angle clockwise at [90,180,270]
+	
+	if Rotation not in [90,180,270]:
+		raise ValueError(f'Rotation must be either 90, 180 or 270, but received {Rotation}')
+	
+	print(f'Opening {PDF_FILE}')
+	pdf = pikepdf.Pdf.open(PDF_FILE)
+	
+	for i in Pages:
+		# pdf counting numbers start at 1, references begin at 0. User will have given actual page numbers
+		i = i - 1
+		print(f'Rotating Page {i+1}')
+		pdf.pages[i].Rotate = Rotation
+	
+	# create filename and save		
+	output = f'{OUT_FILENAME}.pdf'
+	print(f'Writing file {output}')
+	# save the pdf with the greatest pdf version of both files	
+	pdf.save(output)
+	
+	
+
 
 # TESTS
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/pdf-test.pdf'
-#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
+PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
 #OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/TESTTEST.pdf'
-print(TestEncryption(PDF))
+print(TestEncryption(PDF,"blah"))
 #emplace(PDF,OutputFile,subpdf,1)
 
+#RotatePages(PDF,OutputFile,ConvertRanges("1-3,5"),90)
+#print(ConvertRanges("1-4,7,9,12-18"))
 #print(get_pages(pdffile))
 
 #split(PDF,OutputFile,(1,1),False)
