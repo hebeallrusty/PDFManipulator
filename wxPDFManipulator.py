@@ -8,6 +8,8 @@ import wx
 from PDFManipulator import *
 import requests
 from Icon import *
+import webbrowser
+
 # begin wxGlade: dependencies
 # end wxGlade
 
@@ -19,7 +21,7 @@ PROGRAM_VERSION = version()
 FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF"
 URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
 ENCRYPTION_STRENGTH = {0:6,1:4,2:3,3:2} # mapped to pikepdf levels
-
+REPO_URL = 'https://github.com/hebeallrusty/PDFManipulator'
 
 
 class Frame_PDFManipulator(wx.Frame):
@@ -202,8 +204,17 @@ class Frame_PDFManipulator(wx.Frame):
         else: # must have got a valid response
         	print(page.text)
         	if int(PROGRAM_VERSION) < int(page.text):
-        		dialog = wx.MessageDialog(self,f'New Version available: {page.text} \nCurrent Version: {PROGRAM_VERSION}',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
-        		dialog.ShowModal()
+        		dialog = wx.MessageDialog(self,f'New Version available: {page.text} \nCurrent Version: {PROGRAM_VERSION} \n\nWould you like to visit the webpage to download it?',caption = "Check for Update",style = wx.YES_NO |wx.CANCEL | wx.ICON_INFORMATION)
+        		# store result to test what user clicked
+        		result =  dialog.ShowModal()
+        		if result == wx.ID_YES:
+        			# user would like to download the update - so open the browser
+        			# TODO tidy up the repository of files so that the user can find them - maybe select folder based on OS to make it simpler? Might be worth writing an updater / installer to take care of the install
+        			webbrowser.open(REPO_URL)
+        			
+        		
+        			
+        		
         	else:
         		dialog = wx.MessageDialog(self,f'No newer version available',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
         		dialog.ShowModal()
@@ -364,10 +375,12 @@ class Frame_PDFManipulator(wx.Frame):
         		pathname = ''.join([pathname,".pdf"])
         	self.Text_Panel_SelectOutputFile.SetValue(pathname)
         	
+        	
         event.Skip()
         
     def Event_Button_Panel_Go(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-    	# get which page currently has focus so that we can split execution into the relevant sections
+        # get which page currently has focus so that we can split execution into the relevant sections
+
         NotebookPage = self.Notebook_Panel.GetPageText(self.Notebook_Panel.GetSelection())
         OutputFile = self.Text_Panel_SelectOutputFile.GetValue()
         print(self.Text_Split_InputFile.GetValue())

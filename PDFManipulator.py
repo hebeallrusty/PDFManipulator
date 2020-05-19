@@ -5,7 +5,7 @@ import datetime as dt
 import pikepdf
 from pikepdf import _cpphelpers
 
-PROGRAM_DATE = 20200507
+PROGRAM_DATE = 19200507
 
 
 def version():
