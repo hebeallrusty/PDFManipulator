@@ -95,7 +95,7 @@ def pdf_timestamp():
 	# NEEDS TO BE 4 DIGIT YEAR, 2 DIGIT MOND DAY HOUR MINUTE AND SECOND
 	return f'{NOW.year:04}-{NOW.month:02}-{NOW.day:02}T{NOW.hour:02}:{NOW.minute:02}:{NOW.second:02}+00:00'
 
-def ConvertRanges(INPUT):
+def ConvertMixedRanges(INPUT):
 	# Function to convert a page range or list into a proper list i.e. 1-3,5,7 = [1,2,3,5,7]. Similar to print range dialog boxes
 	
 	# spilt the list using the comma as a delimeter. We will be able to iterate over these items to build a proper list containing all the elements
@@ -138,6 +138,41 @@ def ConvertRanges(INPUT):
 		# potential to sort the list here into numerical order - however this behaviour is to be checked as functions are altered in frontend
 	
 	return OutputList
+
+def ConvertSimpleRange(INPUT):
+	# check if INPUT is delimetered with a "-" and returns a list of two items with the start and end ranges
+	
+	if "-" in INPUT:
+	
+		#check there is only one "-". If there are more then return False which means it's failed to work
+		if INPUT.count("-") > 1:
+			return False
+		
+		# split the range
+		InputList = INPUT.split("-")
+		
+		# convert items to integers - but check if they are convertable. If not then return false, else return th
+		try:
+			InputList = list(map(int,InputList))
+		except:
+			return False
+		else:
+			# items must be two integers. Now forgive if the range is the wrong way around
+			if InputList[0] > InputList[1]:
+				# swap them around
+				swap_item(InputList,0,1)
+			return InputList
+	
+	else:
+		try:
+			Input = int(INPUT)
+		except:
+			return False
+		else:
+			# single item must be an integer - return the two items repeated
+			return [Input, Input]		
+	
+			
 
 def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	# PDF_FILE must be a single PDF file
@@ -312,10 +347,12 @@ def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/pdf-test.pdf'
-PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
 #OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/TESTTEST.pdf'
-print(TestEncryption(PDF,"blah"))
+#print(TestEncryption(PDF,"blah"))
 #emplace(PDF,OutputFile,subpdf,1)
+
+#print(ConvertSimpleRange("1,3"))
 
 #RotatePages(PDF,OutputFile,ConvertRanges("1-3,5"),90)
 #print(ConvertRanges("1-4,7,9,12-18"))
@@ -328,11 +365,4 @@ print(TestEncryption(PDF,"blah"))
 #files_in_folder(folder)
 #print(get_docinfo(outfile))
 #print(pdf_datetime())
-#passwd = wx.PasswordEntryDialog(None, "Whats the  password", 'Password','',style=wx.TextEntryDialogStyle)
-#        	ans = passwd.ShowModal()
-#        	if ans == wx.ID_OK:
-#        		entered_password = passwd.GetValue()
-#        	else:
-#        		entered_password = False
-#        	print("password ", entered_password)
-#        	passwd.Destroy()	
+
