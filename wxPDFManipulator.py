@@ -22,6 +22,23 @@ URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulato
 ENCRYPTION_STRENGTH = {0:6,1:4,2:0} # mapped to pikepdf levels
 REPO_URL = 'https://github.com/hebeallrusty/PDFManipulator'
 
+def CheckUpdate():
+        # master branch has a version file which contains the latest version number
+        # may need to check for 404 error if network isn't available
+        try:
+        	page = requests.get(URL_CHECK_UPDATE)
+        	pagestatus = page.status_code
+        	print(pagestatus)
+        	# status codes are the http codes. Anything 400 and above is an error (4xx Client error; 5xx Server error). Let user know unable to check for error
+        	if (pagestatus >= 400):
+        		print(f'Unable to check for an update. Webpage is not available ({pagestatus} error)')
+        		return False
+        	else: # must have got a valid response
+        		return(int(page.text))
+        except: # maybe not connected to the internet?
+        	return False
+        	
+
 
 
 class Frame_PDFManipulator(wx.Frame):
@@ -120,7 +137,7 @@ class Frame_PDFManipulator(wx.Frame):
         self.Statusbar.SetStatusWidths([-1, -2])
 
         # statusbar fields
-        Statusbar_fields = ["Version:", "New Version:"]
+        Statusbar_fields = ["Version:", ""]
         for i in range(len(Statusbar_fields)):
             self.Statusbar.SetStatusText(Statusbar_fields[i], i)
         self.Text_Split_StartPage.SetToolTip("Enter 1-4 for pages 1 to 4 inclusive, or enter a single page number such as 7 for just that page")
@@ -128,6 +145,16 @@ class Frame_PDFManipulator(wx.Frame):
         self.Radiobox_Encrypt_Options.SetSelection(0)
         self.Radiobox_Rotate_Rotation.SetSelection(0)
         self.Radiobox_Rotation_Direction.SetSelection(0)
+        # set status bar text
+        self.Statusbar.SetStatusText(f'Version: {PROGRAM_VERSION}',0)
+        ServerVersion = CheckUpdate()
+        if ServerVersion == False:
+        	pass
+        else:
+        	# check if the update version is greater than set status bar text
+        	if PROGRAM_VERSION < ServerVersion:
+        		self.Statusbar.SetStatusText(f'New Version Available: {ServerVersion}',1)
+        
         # end wxGlade
 
     def __do_layout(self):
@@ -227,7 +254,7 @@ class Frame_PDFManipulator(wx.Frame):
         self.Notebook_Panel.AddPage(self.Notebook_Split, "Split")
         self.Notebook_Panel.AddPage(self.Notebook_Join, "Join")
         self.Notebook_Panel.AddPage(self.Notebook_Encrypt, "Encrypt")
-        self.Notebook_Panel.AddPage(self.Notebook_Subsitute, "Substitute Page")
+        self.Notebook_Panel.AddPage(self.Notebook_Subsitute, "Substitute Pages")
         self.Notebook_Panel.AddPage(self.Notebook_RotatePages, "Rotate Pages")
         Sizer_Panel.Add(self.Notebook_Panel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 6)
         Sizer_Panel_Go.Add((20, 25), 1, wx.LEFT, 5)
@@ -245,32 +272,20 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
         
     def Menu_Check_for_Update(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-    	# master branch has a version file which contains the latest version number
-    	# may need to check for 404 error if network isn't available
-        page = requests.get(URL_CHECK_UPDATE)
-        pagestatus = page.status_code
-        print(pagestatus)
-        # status codes are the http codes. Anything 400 and above is an error (4xx Client error; 5xx Server error). Let user know unable to check for error
-        if (pagestatus >= 400):
-        	dialog = wx.MessageDialog(self,f'Unable to check for an update. Webpage is not available ({pagestatus} error)', style = wx.OK | wx.ICON_ERROR)
+        ServerVersion = CheckUpdate()
+        if int(PROGRAM_VERSION) < ServerVersion:
+        	dialog = wx.MessageDialog(self,f'New Version available: {ServerVersion} \nCurrent Version: {PROGRAM_VERSION} \n\nWould you like to visit the webpage to download it?',caption = "Check for Update",style = wx.YES_NO |wx.CANCEL | wx.ICON_INFORMATION)
+        	# store result to test what user clicked
+        	result =  dialog.ShowModal()
+        	if result == wx.ID_YES:
+        		# user would like to download the update - so open the browser
+        		# TODO tidy up the repository of files so that the user can find them - maybe select folder based on OS to make it simpler? Might be worth writing an updater / installer to take care of the install
+        		webbrowser.open(REPO_URL)
+        			
+
+        else:
+        	dialog = wx.MessageDialog(self,f'No newer version available',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
         	dialog.ShowModal()
-        else: # must have got a valid response
-        	print(page.text)
-        	if int(PROGRAM_VERSION) < int(page.text):
-        		dialog = wx.MessageDialog(self,f'New Version available: {page.text} \nCurrent Version: {PROGRAM_VERSION} \n\nWould you like to visit the webpage to download it?',caption = "Check for Update",style = wx.YES_NO |wx.CANCEL | wx.ICON_INFORMATION)
-        		# store result to test what user clicked
-        		result =  dialog.ShowModal()
-        		if result == wx.ID_YES:
-        			# user would like to download the update - so open the browser
-        			# TODO tidy up the repository of files so that the user can find them - maybe select folder based on OS to make it simpler? Might be worth writing an updater / installer to take care of the install
-        			webbrowser.open(REPO_URL)
-        			
-        		
-        			
-        		
-        	else:
-        		dialog = wx.MessageDialog(self,f'No newer version available',caption = "Check for Update",style = wx.OK | wx.ICON_INFORMATION)
-        		dialog.ShowModal()
         event.Skip()
 
     def Menu_Quit(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -388,8 +403,6 @@ class Frame_PDFManipulator(wx.Frame):
         self.Listbox_Join_Files.InsertItems(listboxitems,0)
         self.Listbox_Join_Files.Update()
         
-        
-        
         # move focus to the item above
 
         if maxitem - 1 == 1:
@@ -426,15 +439,41 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Event_Button_Substitute_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Substitute_InputFile' not implemented!")
+        # show file selection, then put file path and name into Text_Split_InputFile
+        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
+        	# if the cancel button was pressed - do nothing and return
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	
+        	# put the file path into the text control
+        	pathname = fileDialog.GetPath()
+        	self.Text_Substitute_InputFile.SetValue(pathname)
         event.Skip()
 
     def Event_Button_Substitute_Substitute(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Substitute_Substitute' not implemented!")
+        # show file selection, then put file path and name into Text_Split_InputFile
+        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
+        	# if the cancel button was pressed - do nothing and return
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	
+        	# put the file path into the text control
+        	pathname = fileDialog.GetPath()
+        	self.Text_Substitute_SubstituteFile.SetValue(pathname)
+        event.Skip()
         event.Skip()
 
     def Event_Button_Rotate_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Button_Rotate_InputFile' not implemented!")
+        # show file selection, then put file path and name into Text_Split_InputFile
+        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
+        	# if the cancel button was pressed - do nothing and return
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	
+        	# put the file path into the text control
+        	pathname = fileDialog.GetPath()
+        	self.Text_Rotate_InputFile.SetValue(pathname)
+
         event.Skip()
 
     def Event_Notebook_Page_Changed(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -536,7 +575,7 @@ class Frame_PDFManipulator(wx.Frame):
 			
 			# a file is missing so halt
         	if InputFile == "":
-        		dialog = wx.MessageDialog(self,f'Plese select a file to encrypt, or a file to save to',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog = wx.MessageDialog(self,f'Plese select a file to encrypt',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
         		dialog.ShowModal()
         		return
         		
@@ -587,8 +626,152 @@ class Frame_PDFManipulator(wx.Frame):
 			# let the user know that the process has completed
         	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
         	dialog.ShowModal()
+        	
+        	#############################
+        	#############################
+        	############################# 
+        if NotebookPage == "Rotate Pages":
+			#check that we have a file in the input box
+        	InputFile = self.Text_Rotate_InputFile.GetValue()
+			
+        	# a file is missing so halt
+        	if InputFile == "":	
+        		dialog = wx.MessageDialog(self,f'Plese select a file to rotate pages within',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return    
+        	# Get page Ranges
+        	maxpages = get_pages(InputFile)
+        	Pages = self.Text_Rotate_Pages.GetValue()
+        	
+        	# get the sane list of pages to rotate - if list is not sane (i.e isn't like 1-3,5,7,9-12 etc) then the function will return false
+        	PageList = ConvertMixedRanges(Pages)
+        	
+        	PageErrorFlag = False
+        	
+        	if PageList == False: PageErrorFlag = True
+        	
+        	if PageErrorFlag == False:	
+        		if (max(PageList) > maxpages) or (min(PageList) < 1):
+        			PageErrorFlag = True
+        	
+        	# if the PageErrorFlag has tripped, then the pages are not sane	
+        	if PageErrorFlag == True:
+        		dialog = wx.MessageDialog(self,f'Desired pages must be in the range of 1 - {maxpages}',caption = "Page Range Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
 
-        	#print(EncryptionStrength)
+        	# get direction of rotation
+        	
+        	Direction = self.Radiobox_Rotation_Direction.GetSelection()
+        	# 0 here is Clockwise; 1 is Anti-clockwise. pikepdf rotates clockwise so we need to adjust the rotation only if Direction = 1
+        	#RotationDegrees = {0:90;1:180;2:270}
+        	Rotation = (self.Radiobox_Rotate_Rotation.GetSelection() * 90) + 90 # since selection will just be a zero indexed number
+        	#print(Rotation)
+        	if Direction == 1: # then we need to go the other way, but return what the rotation is if it were done clockwise
+        		Rotation = 360 - Rotation
+        		
+        	# get a filename to save to
+        	with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+        		if fileDialog.ShowModal() == wx.ID_CANCEL:
+        			return
+        		# enter file name into output text box
+        		pathname = fileDialog.GetPath()
+        	
+        		#print(pathname.lower())
+        		# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
+        		if pathname.lower()[-4:] != ".pdf":
+        			pathname = ''.join([pathname,".pdf"])
+        	OutputFile = pathname
+        	
+        	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
+        	OutputFile = OutputFile[:-4]
+        	
+        	# Call our rotation function
+        	RotatePages(InputFile,OutputFile,PageList,Rotation)
+        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        	dialog.ShowModal()        	
+        	#print("Done")
+        			
+        	#############################
+        	#############################
+        	############################# 
+        if NotebookPage == "Substitute Pages":
+
+        	InputFile = self.Text_Substitute_InputFile.GetValue()
+			
+        	# a file is missing so halt
+        	if InputFile == "":	
+        		dialog = wx.MessageDialog(self,f'Plese select a file to that will have it\'s pages substituted',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return   
+        	SubsFile = self.Text_Substitute_SubstituteFile.GetValue()
+			
+        	# a file is missing so halt
+        	if SubsFile == "":	
+        		dialog = wx.MessageDialog(self,f'Plese select a file containing substitution pages',caption = "File Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return  
+        	
+        	
+        	# get the page number
+        	
+        	PageNo = self.Text_Substitute_Pages.GetValue()
+        	print(PageNo)
+        	
+        	try:
+        		PageNo = int(PageNo)
+        	except:
+        		dialog = wx.MessageDialog(self,f'Plese enter a valid starting page',caption = "Page Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	# find the number of pages in both docs
+        	
+        	maxpages = [get_pages(InputFile),get_pages(SubsFile)]
+
+        	#print(maxpages)
+        	#print(PageNo + maxpages[1])
+        	# Validate Page number
+        	if (PageNo < 1):
+        		dialog = wx.MessageDialog(self,f'Page Number must be 1 or greater',caption = "Page Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+
+        	elif (PageNo > maxpages[0]):
+        		dialog = wx.MessageDialog(self,f'Page number is greater than number of pages in the original file ({maxpages[0]})',caption = "Page Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	elif (maxpages[1] > maxpages[0]):
+        		dialog = wx.MessageDialog(self,f'There are more pages in the Substitution file than in the Original File',caption = "Page Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	elif (PageNo - 1 + maxpages[1] > maxpages[0]): # need the -1 otherwise you can't do the last page in the file
+        		dialog = wx.MessageDialog(self,f'Page number ({PageNo}) plus number of pages in substitution file ({maxpages[1]}) are greater than in the original file ({maxpages[0]})',caption = "Page Error",style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	
+        	
+        	# get a filename to save to
+        	with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+        		if fileDialog.ShowModal() == wx.ID_CANCEL:
+        			return
+        		# enter file name into output text box
+        		pathname = fileDialog.GetPath()
+        	
+        		#print(pathname.lower())
+        		# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
+        		if pathname.lower()[-4:] != ".pdf":
+        			pathname = ''.join([pathname,".pdf"])
+        	OutputFile = pathname
+        	
+        	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
+        	OutputFile = OutputFile[:-4]
+        	
+        	
+        	# run script
+        	emplace(InputFile,OutputFile,SubsFile,PageNo)
+        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        	dialog.ShowModal()        	
+        	
         event.Skip()
 
 # end of class Frame_PDFManipulator
@@ -598,6 +781,7 @@ class MyApp(wx.App):
         self.frame = Frame_PDFManipulator(None, wx.ID_ANY, "")
         self.SetTopWindow(self.frame)
         self.frame.Show()
+
         return True
 
 # end of class MyApp

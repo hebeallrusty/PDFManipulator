@@ -69,7 +69,7 @@ def copy_meta(SrcMeta,DocObj):
 	#print(SrcMeta)
 	
 	# open meta as writeable for new pdf
-	with DocObj.open_metadata() as meta:
+	with DocObj.open_metadata(set_pikepdf_as_editor=False) as meta:
 		#meta.load_from_docinfo()
 		#cycle through each key in the Source meta, and write that into the new blank file
 		for key in SrcMeta:
@@ -110,15 +110,18 @@ def ConvertMixedRanges(INPUT):
 		# check if there is a dash - in this context include all items e.g 1-3 = 1,2,3
 		if "-" in i:
 		
-			# check if there is only one range within the item, and if there are more, raise an error
+			# check if there is only one range within the item, and if there are more, raise an error / Return False
 			if i.count("-") > 1:
-					raise IndexError(f'Only one "-" allowed within a single range, however received {i.count("-")} in item {i}')
-			
+					#raise IndexError(f'Only one "-" allowed within a single range, however received {i.count("-")} in item {i}')
+					return False
 			# now split this string to find out the start and end points
 			iRange = i.split("-")
 			
-			# convert to integers as split will output strings
-			iRange = list(map(int,iRange))
+			# convert to integers as split will output strings - check that it is convertable and if not return False
+			try:
+				iRange = list(map(int,iRange))
+			except:
+				return False
 			
 			# check if starting number is greater than the ending number - range is reversed
 			if iRange[1] < iRange [0]:
@@ -133,10 +136,13 @@ def ConvertMixedRanges(INPUT):
 			continue
 		
 		# add i to the list but convert to an integer
-		OutputList.append(int(i))
+		try:
+			OutputList.append(int(i))
+		except:
+			return False
+			
 		
-		# potential to sort the list here into numerical order - however this behaviour is to be checked as functions are altered in frontend
-	
+		# potential to sort the list here into numerical order - however this behaviour is to be checked as functions are altered in frontend. With Rotation, multiple versions of the same page are ignored
 	return OutputList
 
 def ConvertSimpleRange(INPUT):
@@ -291,12 +297,16 @@ def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	#	print(f'Replacement pages exceeds the original document pages')
 	
 	# replace page
-	# add substitue page to end of document (currently just the first page - plan to add extras) into original doc
-	pdf.pages.append(subpdf.pages[0])
-	# carry out the substitution
-	pdf.pages[PAGE].emplace(pdf.pages[-1])
-	# delete the added page
-	del pdf.pages[-1]
+	# PAGE is desired page, but index is 1 less i.e PAGE = 1 is actual page 0 in pdf
+	
+	# add substitue page to end of document into original doc
+	for i in range(0,pages[1]):
+		print(f'Substituting page {PAGE+i} in {PDF_FILE} with page {i+1} in {SUBS}')
+		pdf.pages.append(subpdf.pages[i])
+		# carry out the substitution
+		pdf.pages[PAGE - 1 + i].emplace(pdf.pages[-1])
+		# delete the added page
+		del pdf.pages[-1]
 	
 	# create filename and save		
 	output = f'{OUT_FILENAME}.pdf'
@@ -344,18 +354,18 @@ def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
 
 # TESTS
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
-#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
+#SUBPDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/pdf-test.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
 #OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/TESTTEST.pdf'
 #print(TestEncryption(PDF,"blah"))
-#emplace(PDF,OutputFile,subpdf,1)
+#emplace(PDF,OutputFile,SUBPDF,2)
 
 #print(ConvertSimpleRange("1,3"))
 
 #RotatePages(PDF,OutputFile,ConvertRanges("1-3,5"),90)
-#print(ConvertRanges("1-4,7,9,12-18"))
+#print(ConvertMixedRanges("1-3,5,9,12-18"))
 #print(get_pages(pdffile))
 
 #split(PDF,OutputFile,(1,1),False)
