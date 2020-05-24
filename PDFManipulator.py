@@ -84,7 +84,7 @@ def pdf_creator():
 	return f'PDFManipulator {PROGRAM_DATE}'
 	
 def pdf_producer():
-	PIKEPDF_VER = pikepdf.__version__
+	PIKEPDF_VER = '1.13.0' # not ideal but internal method fails on compiled windows binary
 	return f'pikepdf {PIKEPDF_VER}'
 
 def pdf_timestamp():
