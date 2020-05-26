@@ -18,26 +18,9 @@ import webbrowser
 
 PROGRAM_VERSION = version()
 FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF"
-URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
-ENCRYPTION_STRENGTH = {0:6,1:4,2:0} # mapped to pikepdf levels
-REPO_URL = 'https://github.com/hebeallrusty/PDFManipulator'
 
-def CheckUpdate():
-        # master branch has a version file which contains the latest version number
-        # may need to check for 404 error if network isn't available
-        try:
-        	page = requests.get(URL_CHECK_UPDATE)
-        	pagestatus = page.status_code
-        	print(pagestatus)
-        	# status codes are the http codes. Anything 400 and above is an error (4xx Client error; 5xx Server error). Let user know unable to check for error
-        	if (pagestatus >= 400):
-        		print(f'Unable to check for an update. Webpage is not available ({pagestatus} error)')
-        		return False
-        	else: # must have got a valid response
-        		return(int(page.text))
-        except: # maybe not connected to the internet?
-        	return False
-        	
+ENCRYPTION_STRENGTH = {0:6,1:4,2:0} # mapped to pikepdf levels
+REPO_URL = 'https://github.com/hebeallrusty/PDFManipulator/tree/master/dist'
 
 
 
@@ -273,6 +256,7 @@ class Frame_PDFManipulator(wx.Frame):
         
     def Menu_Check_for_Update(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         ServerVersion = CheckUpdate()
+        print(ServerVersion)
         if int(PROGRAM_VERSION) < ServerVersion:
         	dialog = wx.MessageDialog(self,f'New Version available: {ServerVersion} \nCurrent Version: {PROGRAM_VERSION} \n\nWould you like to visit the webpage to download it?',caption = "Check for Update",style = wx.YES_NO |wx.CANCEL | wx.ICON_INFORMATION)
         	# store result to test what user clicked
@@ -579,31 +563,47 @@ class Frame_PDFManipulator(wx.Frame):
         		dialog.ShowModal()
         		return
         		
-        	EncryptionStrength = ENCRYPTION_STRENGTH[self.Radiobox_Encrypt_Options.GetSelection()]
+        	EncryptionStrength = int(ENCRYPTION_STRENGTH[self.Radiobox_Encrypt_Options.GetSelection()])
         	
-        	# temp - halt execution until this is implemented elsewhere
-        	if EncryptionStrength == 0:
-        		return
-        	
-        	password = []
-        	# get the user to enter the passwords into a dialog box
-        	for i in range(0,2):
-        		passwd = wx.PasswordEntryDialog(self, "Enter a Password:", f'Password dialog {i + 1}',"" ,style=wx.TextEntryDialogStyle)
+ 
+        	password = [] 
+         	# check if we actually want to decrypt file      	
+        	if EncryptionStrength != 0: # User wants to encrypt file
+
+        		# get the user to enter the passwords into a dialog box
+        		for i in range(0,2):
+        			passwd = wx.PasswordEntryDialog(self, "Enter a Password:", f'Password dialog {i + 1}',"" ,style=wx.TextEntryDialogStyle)
+        			ans = passwd.ShowModal()
+        			if ans == wx.ID_OK:
+        				password.append(passwd.GetValue())
+        			else:
+        				return
+        			passwd.Destroy()	
+        		#print(self.Text_Encrypt_Password1.GetValue())	
+        		# check if the passwords match
+        		if password[0] != password[1]:
+        			dialog = wx.MessageDialog(self,f'Passwords don\'t match',caption = "Password Error",style = wx.OK | wx.ICON_ERROR)
+        			dialog.ShowModal()
+        			return
+        	else: # user wants to decrypt file
+        		# get the user to enter password
+        		passwd = wx.PasswordEntryDialog(self, "Enter Unlock Password:", f'Password Unlock',"" ,style=wx.TextEntryDialogStyle)
         		ans = passwd.ShowModal()
         		if ans == wx.ID_OK:
-        			password.append(passwd.GetValue())
+        			print(passwd.GetValue())
+        			# if password is false throw an error, if it's true, then add password to the list
+        			if TestEncryption(InputFile,passwd.GetValue()) == True:
+
+        				dialog = wx.MessageDialog(self,f'Incorrect Password',caption = "Unlock Error",style = wx.OK | wx.ICON_ERROR)
+        				dialog.ShowModal()
+        				return
+        			else:
+        				password.append(passwd.GetValue())
         		else:
         			return
-        		passwd.Destroy()	    	
-        	
-        	
-
-        	#print(self.Text_Encrypt_Password1.GetValue())	
-        	# check if the passwords match
-        	if password[0] != password[1]:
-        		dialog = wx.MessageDialog(self,f'Passwords don\'t match',caption = "Password Error",style = wx.OK | wx.ICON_ERROR)
-        		dialog.ShowModal()
-        		return
+        		passwd.Destroy()
+        		    			
+        	print(EncryptionStrength==4)
 
         	# validation complete
         	
@@ -622,7 +622,11 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
         	OutputFile = OutputFile[:-4]
-        	encrypt(InputFile,OutputFile,password[0],EncryptionStrength)
+        	
+        	if EncryptionStrength != 0: # encrypt:
+        		encrypt(InputFile,OutputFile,password[0],EncryptionStrength)
+        	else:
+        		RemoveEncryption(InputFile,OutputFile,password[0])
 			# let the user know that the process has completed
         	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
         	dialog.ShowModal()

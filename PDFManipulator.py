@@ -4,9 +4,10 @@ import os
 import datetime as dt
 import pikepdf
 from pikepdf import _cpphelpers
+import requests
 
-PROGRAM_DATE = 19200507
-
+PROGRAM_DATE = 20200507
+URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
 
 def version():
 	return PROGRAM_DATE
@@ -18,6 +19,25 @@ def swap_item(alist,pos1,pos2):
 def get_pages(PDF_FILE):
 	pdf = pikepdf.Pdf.open(PDF_FILE)
 	return len(pdf.pages)
+	
+def CheckUpdate():
+        print("CHECKING FOR UPDATE")
+        # master branch has a version file which contains the latest version number
+        # use "try" as network may not be available at all which will cause the program to not start
+        try:
+        	page = requests.get(URL_CHECK_UPDATE)
+        	pagestatus = page.status_code
+        	print(pagestatus)
+        	# status codes are the http codes. Anything 400 and above is an error (4xx Client error; 5xx Server error). Let user know unable to check for error
+        	if (pagestatus >= 400):
+        		print(f'Unable to check for an update. Webpage is not available ({pagestatus} error)')
+        		return False
+        	else: # must have got a valid response
+        		return(int(page.text))
+        except Exception as e: # maybe not connected to the internet?
+        	print(e)
+        	return False
+        		
 
 def get_docinfo(PDF_FILE):
 	# open the pdf file
@@ -349,7 +369,18 @@ def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
 	# save the pdf with the greatest pdf version of both files	
 	pdf.save(output)
 	
+def RemoveEncryption(PDF_FILE,OUT_FILENAME,PASSWORD):
+	# open pdf file
 	
+	print(f'Opening {PDF_FILE}')
+	pdf = pikepdf.Pdf.open(PDF_FILE,PASSWORD)
+
+	
+	output = f'{OUT_FILENAME}.pdf'
+	#no_extracting = pikepdf.Permissions(extract=False)
+	print(f'Writing file {output}')
+	pdf.save(output)
+
 
 
 # TESTS
@@ -358,10 +389,11 @@ def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/pdf-test.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain(ENC).pdf'
 #OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/TESTTEST.pdf'
 #print(TestEncryption(PDF,"blah"))
 #emplace(PDF,OutputFile,SUBPDF,2)
-
+#RemoveEncryption(PDF,OutputFile,"blah")
 #print(ConvertSimpleRange("1,3"))
 
 #RotatePages(PDF,OutputFile,ConvertRanges("1-3,5"),90)
