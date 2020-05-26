@@ -31,12 +31,12 @@ StringFileInfo(
     u'040904B0',
     [StringStruct(u'CompanyName', u'Ashley Butler'),
     StringStruct(u'FileDescription', u'Manipulator for PDF Files'),
-    StringStruct(u'FileVersion', u'20200507 TestBuild da1896d'),
+    StringStruct(u'FileVersion', u'20200507 94b441f'),
     StringStruct(u'InternalName', u'PDFManipulator'),
     StringStruct(u'LegalCopyright', u'Copyright (C) 2020 Ashley Butler'),
     StringStruct(u'OriginalFilename', u'PDFManipulator.exe'),
     StringStruct(u'ProductName', u'PDFManipulator'),
-    StringStruct(u'ProductVersion', u'20200507 (TestBuild da1896d)')])
+    StringStruct(u'ProductVersion', u'20200507 (94b441f)')])
   ]), 
 VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]

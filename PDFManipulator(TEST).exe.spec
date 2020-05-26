@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['D:\\SRC\\PDFManipulator-20200507\\wxPDFManipulator.py'],
-             pathex=['D:\\SRC\\PDFManipulator-20200507'],
+a = Analysis(['D:\\SRC\\PDFManipulator\\wxPDFManipulator.py'],
+             pathex=['D:\\SRC\\PDFManipulator'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -30,5 +30,5 @@ exe = EXE(pyz,
           upx=True,
           upx_exclude=[],
           runtime_tmpdir=None,
-          console=False , icon='D:\\SRC\\PDFManipulator-20200507\\icon\\PDFManipulator.ico',
-          version='D:\\SRC\\VersionInfo.py')
+          console=False , icon='D:\\SRC\\PDFManipulator\\icon\\PDFManipulator.ico',
+          version='D:\\SRC\\PDFManipulator\\VersionInfo.py')
