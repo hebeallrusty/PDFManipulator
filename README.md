@@ -4,11 +4,20 @@
 
 Program to do basic manipulation to PDF files such as split, join, encrypt, rotate pages and substitute pages
 
-Written in Python and utilises the pikepdf library (1.13.0), and wxpython
+Written in Python and utilises the pikepdf library (1.13.0), and wxpython (4.0.7)
 
 ## Releases
 
-+ 20200507
++ 20200604 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/2020604/PDFManipulator.exe)
+
+```
+	- Updated pikepdf library to 1.14.0
+	- Added Drag and Drop to all file inputs for much simpler and friendlier usage
+	
+```
+
+
++ 20200507 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/2020507/PDFManipulator.exe)
 
 ```
 	- Adding function to rotate PDFs
@@ -26,7 +35,7 @@ Written in Python and utilises the pikepdf library (1.13.0), and wxpython
 	- Changed icons to self drawn ones
 ```
 
-+ 20200403
++ 20200403 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/2020403/PDFManipulator.exe)
 
 ```
 	- Initial Release

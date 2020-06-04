@@ -6,11 +6,15 @@ import pikepdf
 from pikepdf import _cpphelpers
 import requests
 
-PROGRAM_DATE = 20200507
+PROGRAM_DATE = 20200604
+PIKEPDF_VER = '1.14.0'
 URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
 
 def version():
 	return PROGRAM_DATE
+	
+def pikepdfversion():
+	return PIKEPDF_VER
 
 def swap_item(alist,pos1,pos2):
 	alist[pos1],alist[pos2] = alist[pos2],alist[pos1]
@@ -104,7 +108,7 @@ def pdf_creator():
 	return f'PDFManipulator {PROGRAM_DATE}'
 	
 def pdf_producer():
-	PIKEPDF_VER = '1.13.0' # not ideal but internal method fails on compiled windows binary
+	#PIKEPDF_VER = '1.14.0' # not ideal but internal method fails on compiled windows binary
 	return f'pikepdf {PIKEPDF_VER}'
 
 def pdf_timestamp():
@@ -281,10 +285,11 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 	doc.remove_unreferenced_resources()
 	print(f'Saving file as {OUT_FILENAME} (PDF Version {version})')
 	# open meta as writeable for new pdf
-	with doc.open_metadata() as docmeta:
+	with doc.open_metadata(set_pikepdf_as_editor=False) as docmeta:
 		docmeta['xmp:ModifyDate'] = pdf_timestamp()
 		docmeta['xmp:CreateDate'] = pdf_timestamp()	
 		docmeta['xmp:CreatorTool'] = pdf_creator()
+		docmeta['pdf:Producer'] = pdf_producer()
 	doc.save(OUT_FILENAME,min_version=version)
 
 def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
