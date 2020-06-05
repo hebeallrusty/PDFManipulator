@@ -11,6 +11,7 @@ from PDFManipulator import *
 import requests
 from Icon import *
 import webbrowser
+import subprocess
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -532,51 +533,19 @@ class Frame_PDFManipulator(wx.Frame):
 
     def Event_Button_Split_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
-        	# if the cancel button was pressed - do nothing and return
-        	if fileDialog.ShowModal() == wx.ID_CANCEL:
-        		return
-        	
-        	# put the file path into the text control
-        	pathname = fileDialog.GetPath()
-        	self.Text_Split_InputFile.SetValue(pathname)
-        	# get the number of pages an update the label
-        	pages = get_pages(pathname)
-        	self.Label_Split_Info.SetLabel(f'There are {pages} pages in this PDF')
-        	#print(dir(self))
-        	
+        self.OpenFile(self.Text_Split_InputFile)
         
         event.Skip()
 
     def Event_Button_Join_SelectFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR | wx.FD_MULTIPLE) as fileDialog:
-        	# if the cancel button was pressed - do nothing and return
-        	if fileDialog.ShowModal() == wx.ID_CANCEL:
-        		return
-        	# multiple files may have been selected so use GetPath*s* - return is a list of file names
-        	pathnames = fileDialog.GetPaths()
-        	
-        # populate the list box. Ensure that items are added at the end of the list
-       	self.Listbox_Join_Files.InsertItems(pathnames,self.Listbox_Join_Files.GetCount())
-        		
+        self.OpenFiles(self.Listbox_Join_Files)		
         
         event.Skip()
 
     def Event_Button_Join_SelectFolder(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show folder selection - additional processing requried to get the pdf files
-        with wx.DirDialog(self,"Choose folder of PDF files",style = wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST) as dirDialog:
-        	# return if cancel button was pressed
-        	if dirDialog.ShowModal() == wx.ID_CANCEL:
-        		return
-        	dirname = dirDialog.GetPath()
-        pathnames = files_in_folder(dirname)
-        # print(pathnames)
-        # return if there are no pdf's in the directory
-        if not pathnames:
-        	return
-        # populate the list box - items to be added at the end
-        self.Listbox_Join_Files.InsertItems(pathnames,self.Listbox_Join_Files.GetCount())
+        self.OpenFolder(self.Listbox_Join_Files)
         
         event.Skip()
 
@@ -665,52 +634,25 @@ class Frame_PDFManipulator(wx.Frame):
 
     def Event_Button_Encrypt_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
-        	# if the cancel button was pressed - do nothing and return
-        	if fileDialog.ShowModal() == wx.ID_CANCEL:
-        		return
-        	
-        	# put the file path into the text control
-        	pathname = fileDialog.GetPath()
-        	self.Text_Encrypt_InputFile.SetValue(pathname)
+        self.OpenFile(self.Text_Encrypt_InputFile)
 
         event.Skip()
 
     def Event_Button_Substitute_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        # show file selection, then put file path and name into Text_Split_InputFile
-        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
-        	# if the cancel button was pressed - do nothing and return
-        	if fileDialog.ShowModal() == wx.ID_CANCEL:
-        		return
-        	
-        	# put the file path into the text control
-        	pathname = fileDialog.GetPath()
-        	self.Text_Substitute_InputFile.SetValue(pathname)
+       	self.OpenFile(self.Text_Substitute_InputFile)
+       	
         event.Skip()
 
     def Event_Button_Substitute_Substitute(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
-        	# if the cancel button was pressed - do nothing and return
-        	if fileDialog.ShowModal() == wx.ID_CANCEL:
-        		return
-        	
-        	# put the file path into the text control
-        	pathname = fileDialog.GetPath()
-        	self.Text_Substitute_SubstituteFile.SetValue(pathname)
+       	self.OpenFile(self.Text_Substitute_SubstituteFile)
+       	
         event.Skip()
-        event.Skip()
+
 
     def Event_Button_Rotate_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
-        	# if the cancel button was pressed - do nothing and return
-        	if fileDialog.ShowModal() == wx.ID_CANCEL:
-        		return
-        	
-        	# put the file path into the text control
-        	pathname = fileDialog.GetPath()
-        	self.Text_Rotate_InputFile.SetValue(pathname)
+       	self.OpenFile(self.Text_Rotate_InputFile)
 
         event.Skip()
 
@@ -723,7 +665,7 @@ class Frame_PDFManipulator(wx.Frame):
 
         NotebookPage = self.Notebook_Panel.GetPageText(self.Notebook_Panel.GetSelection())
         #OutputFile = self.Text_Panel_SelectOutputFile.GetValue()
-        print(self.Text_Split_InputFile.GetValue())
+
         if NotebookPage == "Split":
         	# pick up the values of each relevant section
         	InputFile = self.Text_Split_InputFile.GetValue()
@@ -756,26 +698,14 @@ class Frame_PDFManipulator(wx.Frame):
         	OutputFileChoice = self.Radiobox_Split_OutputOptions.GetSelection()  
         	
         	# Now we can ask where the output is to be saved
-        	
-        	with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
-        		if fileDialog.ShowModal() == wx.ID_CANCEL:
-        			return
-        		# enter file name into output text box
-        		pathname = fileDialog.GetPath()
-        	
-        		#print(pathname.lower())
-        		# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
-        		if pathname.lower()[-4:] != ".pdf":
-        			pathname = ''.join([pathname,".pdf"])
-        	OutputFile = pathname
-        	#print(OutputFile)
-        	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
-        	OutputFile = OutputFile[:-4]
+
+        	OutputFile = self.SaveFile(False)
         	#print(OutputFile)
         	
         	# carry out the split operation
         	self.Statusbar.SetStatusText(f'Working...',2)
         	split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice)
+
         	self.Statusbar.SetStatusText(f'',2)
         	# let the user know that the process has completed
         	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
@@ -791,17 +721,8 @@ class Frame_PDFManipulator(wx.Frame):
 
         	# validation complete - get all the list items
         	listbox = [self.Listbox_Join_Files.GetString(i) for i in range(0,maxitem)]
-        	with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
-        		if fileDialog.ShowModal() == wx.ID_CANCEL:
-        			return
-        		# enter file name into output text box
-        		pathname = fileDialog.GetPath()
-        	
-        		#print(pathname.lower())
-        		# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
-        		if pathname.lower()[-4:] != ".pdf":
-        			pathname = ''.join([pathname,".pdf"])
-        	OutputFile = pathname
+        	# get a file location to save to
+        	OutputFile = self.SaveFile()
         	
         	self.Statusbar.SetStatusText(f'Working...',2)
         	join(listbox,OutputFile)
@@ -868,20 +789,7 @@ class Frame_PDFManipulator(wx.Frame):
         	# validation complete
         	
         	# get the output filename
-        	with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
-        		if fileDialog.ShowModal() == wx.ID_CANCEL:
-        			return
-        		# enter file name into output text box
-        		pathname = fileDialog.GetPath()
-        	
-        		#print(pathname.lower())
-        		# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
-        		if pathname.lower()[-4:] != ".pdf":
-        			pathname = ''.join([pathname,".pdf"])
-        	OutputFile = pathname
-        	
-        	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
-        	OutputFile = OutputFile[:-4]
+        	OutputFile = self.SaveFile(False)
         	
         	if EncryptionStrength != 0: # encrypt:
         		self.Statusbar.SetStatusText(f'Working...',2)
@@ -939,20 +847,8 @@ class Frame_PDFManipulator(wx.Frame):
         		Rotation = 360 - Rotation
         		
         	# get a filename to save to
-        	with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
-        		if fileDialog.ShowModal() == wx.ID_CANCEL:
-        			return
-        		# enter file name into output text box
-        		pathname = fileDialog.GetPath()
+        	OutputFile = self.SaveFile(False)
         	
-        		#print(pathname.lower())
-        		# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
-        		if pathname.lower()[-4:] != ".pdf":
-        			pathname = ''.join([pathname,".pdf"])
-        	OutputFile = pathname
-        	
-        	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
-        	OutputFile = OutputFile[:-4]
         	
         	# Call our rotation function
         	self.Statusbar.SetStatusText(f'Working...',2)
@@ -1021,21 +917,7 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	
         	# get a filename to save to
-        	with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
-        		if fileDialog.ShowModal() == wx.ID_CANCEL:
-        			return
-        		# enter file name into output text box
-        		pathname = fileDialog.GetPath()
-        	
-        		#print(pathname.lower())
-        		# filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
-        		if pathname.lower()[-4:] != ".pdf":
-        			pathname = ''.join([pathname,".pdf"])
-        	OutputFile = pathname
-        	
-        	# remove .pdf file extension as PDFManipulator library adds in page numbers and .pdf ext
-        	OutputFile = OutputFile[:-4]
-        	
+        	OutputFile = self.SaveFile(False)
         	
         	# run script
         	self.Statusbar.SetStatusText(f'Working...',2)
@@ -1045,6 +927,62 @@ class Frame_PDFManipulator(wx.Frame):
         	dialog.ShowModal()        	
         	
         event.Skip()
+#######################################################################
+    
+    def OpenFile(self,control):
+    	with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR) as fileDialog:
+        	# if the cancel button was pressed - do nothing and return
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	
+        	# put the file path into the text control
+        	pathname = fileDialog.GetPath()
+        	control.SetValue(pathname)
+        	
+    def OpenFiles(self,control):
+    	with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR | wx.FD_MULTIPLE) as fileDialog:
+        	# if the cancel button was pressed - do nothing and return
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	# multiple files may have been selected so use GetPath*s* - return is a list of file names
+        	pathnames = fileDialog.GetPaths()
+        	
+        # populate the list box. Ensure that items are added at the end of the list
+    	control.InsertItems(pathnames,control.GetCount())
+    
+    def OpenFolder(self,control):
+    	with wx.DirDialog(self,"Choose folder of PDF files",style = wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST) as dirDialog:
+        	# return if cancel button was pressed
+        	if dirDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	dirname = dirDialog.GetPath()
+    	pathnames = files_in_folder(dirname)
+    	# print(pathnames)
+    	# return if there are no pdf's in the directory
+    	if not pathnames:
+    		return
+    	# populate the list box - items to be added at the end
+    	control.InsertItems(pathnames,control.GetCount())
+    	
+    def SaveFile(self,fileextrequired=True):
+    	# get a filename to save to
+    	with wx.FileDialog(self, "Save PDF File", wildcard = FILE_WILDCARD, style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+        	if fileDialog.ShowModal() == wx.ID_CANCEL:
+        		return
+        	# enter file name into output text box
+        	pathname = fileDialog.GetPath()
+        	
+        #print(pathname.lower())
+        # filename might not have .pdf in filename, so add it in if it's missing - PDF function adds ",pdf" automatically
+    	if pathname.lower()[-4:] != ".pdf":
+    		pathname = ''.join([pathname,".pdf"])
+    	# return can be different depending if the extension is required or not	
+    	if fileextrequired == True:
+    		return pathname
+    	else:
+    		return pathname[:-4]
+    	return pathname	
+    	
 
 # end of class Frame_PDFManipulator
 
