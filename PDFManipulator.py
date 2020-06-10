@@ -10,6 +10,16 @@ PROGRAM_DATE = 20200604
 PIKEPDF_VER = '1.14.0'
 URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
 
+def ERRORS(error,errobj,filename=None):
+	if error == 'OpenFileNotFound':
+		return f'Unable to open:{filename} - {errobj.strerror}'
+	elif error == 'PasswordError':
+		return f'Incorrect password given for {filename}'
+	elif error == 'SaveFileNotFound':
+		return f'Unable to save to:{filename} - {errobj.strerror}'
+	elif error == 'Permission':
+		return f'Access denied to {filename}'
+
 def version():
 	return PROGRAM_DATE
 	
@@ -210,8 +220,21 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	# PageRange must be a tuple containing start and end pages
 	# dismantle denotes whether single files are required (True) or one file containing the range of pages (False)
 
+	# error handling if file cannot be opened
 	print(f'Opening {PDF_FILE}')
-	pdf = pikepdf.Pdf.open(PDF_FILE)
+	
+	# check if we can open the file - main errors are file is missing, or is the password is wrong. Current implementation doesn't allow for unlock password in this module. Anything that isn't caught returns the generic error
+	try:
+		pdf = pikepdf.Pdf.open(PDF_FILE)
+	except FileNotFoundError as e:
+		print(f'File Not Found')
+		return ERRORS('OpenFileNotFound',e, filename=PDF_FILE)
+	except pikepdf._qpdf.PasswordError as e:
+		print(f'Wrong Password')
+		return ERRORS('PasswordError',e,filename=PDF_FILE)
+	except Exception as e:
+		print(e.__class__)
+		return e
 	print(f'Getting Document Properties')
 	meta = get_docinfo(PDF_FILE)
 	version = pdf.pdf_version
@@ -240,7 +263,18 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 			# create filename. range is 0 based, so add in 1 so that page numbers match		
 			output = f'{OUT_DIR}{filename}({i+1}).pdf'
 			print(f'Writing file {output}')
-			doc.save(output,min_version=version)
+			
+			try:
+				doc.save(output,min_version=version)
+			except FileNotFoundError as e:
+				print(f'Output File not Found')
+				return ERRORS('SaveFileNotFound',e,filename = output)
+			except PermissionError as e:
+				print(f'Permission Error')
+				return ERRORS('Permission',e,filename = output)
+			except Exception as e:
+				print(e.__class__)
+				return e
 			
 	else:
 		# create new output object
@@ -254,9 +288,20 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	
 		output = f'{OUT_DIR}{filename}.pdf'
 		print(f'Writing file {output}')
-		doc.save(output,min_version=version)
-		
-
+		try:
+			doc.save(output,min_version=version)
+		except FileNotFoundError as e:
+			print(f'Output File not Found')
+			return ERRORS('SaveFileNotFound',e,filename = output)
+		except PermissionError as e:
+			print(f'Permission Error')
+			return ERRORS('Permission',e,filename = output)
+		except Exception as e:
+			print(e.__class__)
+			return e
+	
+	# if we got here, then we must have run successfully - return True to let caller know we were successful	
+	return True
 	
 
 def join(PDF_FILES,OUT_FILENAME,folder=False):
@@ -389,13 +434,14 @@ def RemoveEncryption(PDF_FILE,OUT_FILENAME,PASSWORD):
 
 
 # TESTS
-#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
+PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
 #SUBPDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/pdf-test.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain(ENC).pdf'
-#OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/TESTTEST.pdf'
+OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/test'
+#OutputFile = '/'
 #print(TestEncryption(PDF,"blah"))
 #emplace(PDF,OutputFile,SUBPDF,2)
 #RemoveEncryption(PDF,OutputFile,"blah")
@@ -405,7 +451,8 @@ def RemoveEncryption(PDF_FILE,OUT_FILENAME,PASSWORD):
 #print(ConvertMixedRanges("1-3,5,9,12-18"))
 #print(get_pages(pdffile))
 
-#split(PDF,OutputFile,(1,1),False)
+a=split(PDF,OutputFile,(1,1),False)
+print(a)
 #splittest(pdffile,outdir,(1,10))
 #print(get_filename(PDF))
 #join(folder,outfile,True)
