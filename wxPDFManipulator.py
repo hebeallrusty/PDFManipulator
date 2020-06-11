@@ -332,12 +332,19 @@ class Frame_PDFManipulator(wx.Frame):
     	#print(dir(event))
     	#print(event.GetEventObject)
     	#print(dir(event))
+    	self.Label_Split_Info.SetLabel(f'')
     	self.Text_Split_InputFile.ChangeValue(event.GetSingleItem())
     	# check if the input file control is blank, and if not then advise how many pages there are in the pdf
     	pdf = self.Text_Split_InputFile.GetValue()
     	print(f'Dropped file rejected?: {pdf==""}')
     	if pdf != "" :
     		pages = get_pages(pdf)
+    		try:
+    			int(pages)
+    		except:
+    			dialog = wx.MessageDialog(self,pages, caption = "Error", style = wx.OK | wx.ICON_ERROR)
+    			dialog.ShowModal()
+    			return
     		self.Label_Split_Info.SetLabel(f'There are {pages} pages in this PDF')
 	
     	
@@ -685,7 +692,13 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# find what the biggest page number is to ensure our range fits with the PDF file
         	maxpages = get_pages(InputFile)	
-
+        	
+        	# check for an error and halt if there is
+        	if maxpages.isnumeric() != True:
+        		dialog = wx.MessageDialog(self,maxpages, caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        		return
+        	
         	# check page number boundaries don't exceed pdf boundaries
         	if (Pages[0] < 1) or (Pages[1] > maxpages) or (Pages[0] > maxpages) or (Pages[1] < 1) or (Pages[0] > Pages[1]):
         		dialog = wx.MessageDialog(self,f'Page number selection should be between 1 and {maxpages}',caption = "Page Selection Error",style = wx.OK | wx.ICON_ERROR)
@@ -704,12 +717,17 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# carry out the split operation
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice)
-
+        	result = split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice)
         	self.Statusbar.SetStatusText(f'',2)
-        	# let the user know that the process has completed
-        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
-        	dialog.ShowModal()
+        	
+        	if result == True:
+        		# let the user know that the process has completed
+        		dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        		dialog.ShowModal()
+        	else:
+        		# there was an error and the result is the error message
+        		dialog = wx.MessageDialog(self,result,caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
         	
         	#############################
         	#############################

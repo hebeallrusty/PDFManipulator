@@ -31,7 +31,20 @@ def swap_item(alist,pos1,pos2):
 	return alist
 
 def get_pages(PDF_FILE):
-	pdf = pikepdf.Pdf.open(PDF_FILE)
+	try:
+		pdf = pikepdf.Pdf.open(PDF_FILE)
+	except FileNotFoundError as e:
+		print(f'File Not Found')
+		return ERRORS('OpenFileNotFound',e, filename=PDF_FILE)
+	except pikepdf._qpdf.PasswordError as e:
+		print(f'Wrong Password')
+		return ERRORS('PasswordError',e,filename=PDF_FILE)
+	except PermissionError as e:
+		print(f'Permission Error')
+		return ERRORS('Permission',e,filename=PDF_FILE)
+	except Exception as e:
+		print(e.__class__)
+		return e
 	return len(pdf.pages)
 	
 def CheckUpdate():
@@ -232,6 +245,9 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	except pikepdf._qpdf.PasswordError as e:
 		print(f'Wrong Password')
 		return ERRORS('PasswordError',e,filename=PDF_FILE)
+	except PermissionError as e:
+		print(f'Permission Error')
+		return ERRORS('Permission',e,filename=PDF_FILE)
 	except Exception as e:
 		print(e.__class__)
 		return e
@@ -434,13 +450,13 @@ def RemoveEncryption(PDF_FILE,OUT_FILENAME,PASSWORD):
 
 
 # TESTS
-PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
 #SUBPDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
-#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/pdf-test.pdf'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/test.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain(ENC).pdf'
-OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/test'
+#OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/test'
 #OutputFile = '/'
 #print(TestEncryption(PDF,"blah"))
 #emplace(PDF,OutputFile,SUBPDF,2)
@@ -451,8 +467,8 @@ OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/test'
 #print(ConvertMixedRanges("1-3,5,9,12-18"))
 #print(get_pages(pdffile))
 
-a=split(PDF,OutputFile,(1,1),False)
-print(a)
+#a=split(PDF,OutputFile,(1,1),False)
+#print(a)
 #splittest(pdffile,outdir,(1,10))
 #print(get_filename(PDF))
 #join(folder,outfile,True)
