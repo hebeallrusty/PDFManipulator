@@ -19,6 +19,8 @@ def ERRORS(error,errobj,filename=None):
 		return f'Unable to save to:{filename} - {errobj.strerror}'
 	elif error == 'Permission':
 		return f'Access denied to {filename}'
+	elif error == 'IO':
+		return f'An Input / Output error occured when accessing {filename}'
 
 def version():
 	return PROGRAM_DATE
@@ -31,21 +33,12 @@ def swap_item(alist,pos1,pos2):
 	return alist
 
 def get_pages(PDF_FILE):
-	try:
-		pdf = pikepdf.Pdf.open(PDF_FILE)
-	except FileNotFoundError as e:
-		print(f'File Not Found')
-		return ERRORS('OpenFileNotFound',e, filename=PDF_FILE)
-	except pikepdf._qpdf.PasswordError as e:
-		print(f'Wrong Password')
-		return ERRORS('PasswordError',e,filename=PDF_FILE)
-	except PermissionError as e:
-		print(f'Permission Error')
-		return ERRORS('Permission',e,filename=PDF_FILE)
-	except Exception as e:
-		print(e.__class__)
-		return e
-	return len(pdf.pages)
+	# see if we can open the PDF file - return is a list
+	pdf = TryOpenPDF(PDF_FILE)
+	if pdf[0] == False:
+		return (False,pdf[1])
+	else:
+		return (True,len(pdf[1].pages))
 	
 def CheckUpdate():
         print("CHECKING FOR UPDATE")
@@ -68,7 +61,12 @@ def CheckUpdate():
 
 def get_docinfo(PDF_FILE):
 	# open the pdf file
-	pdf = pikepdf.Pdf.open(PDF_FILE)
+	trypdf = TryOpenPDF(PDF_FILE)
+	if trypdf[0] == False:
+		return (False,trypdf[1])
+	else:
+		pdf = trypdf[1]
+	#pdf = pikepdf.Pdf.open(PDF_FILE)
 	
 	# if there is an xmp metadata, get it, if the file is older then opening the meta with pikepdf will create a blank xmp metadata
 	meta = pdf.open_metadata()
@@ -91,7 +89,7 @@ def get_docinfo(PDF_FILE):
 		with meta as META:
 			META.load_from_docinfo(pdf.docinfo)		
 	
-	return meta
+	return (True,meta)
 	
 
 def get_filename(PDF_FILE):
@@ -237,22 +235,16 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	print(f'Opening {PDF_FILE}')
 	
 	# check if we can open the file - main errors are file is missing, or is the password is wrong. Current implementation doesn't allow for unlock password in this module. Anything that isn't caught returns the generic error
-	try:
-		pdf = pikepdf.Pdf.open(PDF_FILE)
-	except FileNotFoundError as e:
-		print(f'File Not Found')
-		return ERRORS('OpenFileNotFound',e, filename=PDF_FILE)
-	except pikepdf._qpdf.PasswordError as e:
-		print(f'Wrong Password')
-		return ERRORS('PasswordError',e,filename=PDF_FILE)
-	except PermissionError as e:
-		print(f'Permission Error')
-		return ERRORS('Permission',e,filename=PDF_FILE)
-	except Exception as e:
-		print(e.__class__)
-		return e
+
+	trypdf = TryOpenPDF(PDF_FILE)
+	if trypdf[0] == False:
+		return (False,trypdf[1])
+	else:
+		pdf = trypdf[1]
+	
+	# document is openable so next command will succeed so just receive the object
 	print(f'Getting Document Properties')
-	meta = get_docinfo(PDF_FILE)
+	meta = get_docinfo(PDF_FILE)[1]
 	version = pdf.pdf_version
 	print(f'PDF Version {version}')
 	
@@ -288,6 +280,9 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 			except PermissionError as e:
 				print(f'Permission Error')
 				return ERRORS('Permission',e,filename = output)
+			except IOError as e:
+				print(f'Input / Output Error')
+				return ERRORS('IO',e,filename = output)
 			except Exception as e:
 				print(e.__class__)
 				return e
@@ -312,6 +307,9 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 		except PermissionError as e:
 			print(f'Permission Error')
 			return ERRORS('Permission',e,filename = output)
+		except IOError as e:
+			print(f'Input / Output Error')
+			return ERRORS('IO',e,filename=output)
 		except Exception as e:
 			print(e.__class__)
 			return e
@@ -331,12 +329,19 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 	# if we are dealing with a folder - get all the pdf's in that folder and convert that into the PDF_FILES
 	if folder == True:
 		print(f'getting all PDF files in {PDF_FILES}')
+		# TODO check for problems here!!
 		PDF_FILES = files_in_folder(PDF_FILES)
 
 	for PDF in PDF_FILES:
 		print(f'Opening {PDF}')
 		# Open source document
-		pdf = pikepdf.Pdf.open(PDF)
+		#pdf = pikepdf.Pdf.open(PDF)
+		trypdf = TryOpenPDF(PDF)
+		if trypdf[0] == False:
+			return (False,trypdf[1])
+		else:
+			pdf = trypdf[1]
+		
 		# keep track of versions so that we write a pdf of the highest version to support the most features in the output
 		version = max(version,pdf.pdf_version)
 		# pikepdf pages are list objects so extend into the source doc
@@ -352,13 +357,19 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 		docmeta['xmp:CreatorTool'] = pdf_creator()
 		docmeta['pdf:Producer'] = pdf_producer()
 	doc.save(OUT_FILENAME,min_version=version)
+	
+	return True
 
 def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
 	# open pdf file
 	
 	print(f'Opening {PDF_FILE}')
-	pdf = pikepdf.Pdf.open(PDF_FILE)
-
+	#pdf = pikepdf.Pdf.open(PDF_FILE)
+	trypdf = TryOpenPDF(PDF_FILE)
+	if trypdf[0] == False:
+		return (False,trypdf[1])
+	else:
+		pdf = trypdf[1]
 	
 	output = f'{OUT_FILENAME}.pdf'
 	no_extracting = pikepdf.Permissions(extract=False)
@@ -371,9 +382,26 @@ def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	# currently only does one page but plan for whole sub document
 	
 	print(f'Opening {PDF_FILE}')
-	pdf = pikepdf.Pdf.open(PDF_FILE)
+	#pdf = pikepdf.Pdf.open(PDF_FILE)
+	
+	trypdf = TryOpenPDF(PDF_FILE)
+	
+	if trypdf[0] == False:
+		return (False,trypdf[1])
+	else
+		pdf = trypdf[1]
+	
 	print(f'Opening {SUBS}')
 	subpdf = pikepdf.Pdf.open(SUBS)
+	
+	trypdf = TryOpenPDF(SUBS)
+	
+	if trypdf[0] == False:
+		return (False,trypdf[1])
+	else
+		subpdf = trypdf[1]	
+	
+	
 	version = [pdf.pdf_version,subpdf.pdf_version]
 	pages = [get_pages(PDF_FILE),get_pages(SUBS)]
 	print(f'Pages: {pages} Version: {version}')
@@ -421,7 +449,14 @@ def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
 		raise ValueError(f'Rotation must be either 90, 180 or 270, but received {Rotation}')
 	
 	print(f'Opening {PDF_FILE}')
-	pdf = pikepdf.Pdf.open(PDF_FILE)
+	#pdf = pikepdf.Pdf.open(PDF_FILE)
+	
+	trypdf = TryOpenPDF(PDF_FILE)
+	
+	if trypdf[0] == False:
+		return (False,trypdf[1])
+	else:
+		pdf = trypdf[1]
 	
 	for i in Pages:
 		# pdf counting numbers start at 1, references begin at 0. User will have given actual page numbers
@@ -439,18 +474,52 @@ def RemoveEncryption(PDF_FILE,OUT_FILENAME,PASSWORD):
 	# open pdf file
 	
 	print(f'Opening {PDF_FILE}')
-	pdf = pikepdf.Pdf.open(PDF_FILE,PASSWORD)
-
+	#pdf = pikepdf.Pdf.open(PDF_FILE,PASSWORD)
+	trypdf = TryOpenPDF(PDF_FILE,PASSWORD)
+	
+	if trypdf[0] == False:
+		return (False, trypdf[1])
+	else:
+		pdf = trypdf[1]
 	
 	output = f'{OUT_FILENAME}.pdf'
 	#no_extracting = pikepdf.Permissions(extract=False)
 	print(f'Writing file {output}')
 	pdf.save(output)
-
+	
+def TryOpenPDF(PDF_FILE,PASSWORD = ""):
+	# we want to wrap the opening of the PDF into a try/except statement as the file may not actually be openable
+	
+	try: 
+		print(f'Trying to open {PDF_FILE}')
+		ret = pikepdf.Pdf.open(PDF_FILE,password=PASSWORD)
+		#print(get_pages(ret))
+		# success - we can return the object back to the caller, and let them know it came back true
+		return (True,ret)#print("success")
+		
+		# otherwise check for errors and do something sane to allow error messages to be displayed
+	except FileNotFoundError as e:
+		print(f'File Not Found')
+		return (False,ERRORS('OpenFileNotFound',e, filename=PDF_FILE))
+	except pikepdf._qpdf.PasswordError as e:
+		print(f'Wrong Password')
+		return (False,ERRORS('PasswordError',e,filename=PDF_FILE))
+	except PermissionError as e:
+		print(f'Permission Error')
+		return (False,ERRORS('Permission',e,filename=PDF_FILE))
+	except IOError as e:
+		print(f'Input / Output Error')
+		return (False,ERRORS('IO',e,filename=PDF_FILE))
+	except Exception as e:
+		print(f'Unhandled Error')
+		print(e.__class__)
+		return (False,e)
+		
+#def TrySavePDF(PDF_FILE)
 
 
 # TESTS
-#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
+PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf#'
 #SUBPDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/test.pdf'
@@ -462,17 +531,21 @@ def RemoveEncryption(PDF_FILE,OUT_FILENAME,PASSWORD):
 #emplace(PDF,OutputFile,SUBPDF,2)
 #RemoveEncryption(PDF,OutputFile,"blah")
 #print(ConvertSimpleRange("1,3"))
-
+#pdf = TryOpenPDF(PDF)
+#if pdf[0] == True:
+#	print("SUCCESS")
+#	print(len(pdf[1].pages))
+#else:
+#	print("ERROR")
 #RotatePages(PDF,OutputFile,ConvertRanges("1-3,5"),90)
 #print(ConvertMixedRanges("1-3,5,9,12-18"))
-#print(get_pages(pdffile))
-
+#print(get_pages(PDF))
 #a=split(PDF,OutputFile,(1,1),False)
 #print(a)
 #splittest(pdffile,outdir,(1,10))
 #print(get_filename(PDF))
 #join(folder,outfile,True)
 #files_in_folder(folder)
-#print(get_docinfo(outfile))
+#print(get_docinfo(PDF))
 #print(pdf_datetime())
 

@@ -691,13 +691,14 @@ class Frame_PDFManipulator(wx.Frame):
         		return
         	
         	# find what the biggest page number is to ensure our range fits with the PDF file
-        	maxpages = get_pages(InputFile)	
-        	
-        	# check for an error and halt if there is
-        	if maxpages.isnumeric() != True:
-        		dialog = wx.MessageDialog(self,maxpages, caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        	trymaxpages = get_pages(InputFile)	
+        	if trymaxpages[0] == False:
+        		dialog = wx.MessageDialog(self,f'Unable to get number of pages from file. {trymaxpages[1]}',caption = "Error",style = wx.OK | wx.ICON_ERROR)
         		dialog.ShowModal()
         		return
+        	else:
+        		maxpages = trymaxpages[1]
+        	
         	
         	# check page number boundaries don't exceed pdf boundaries
         	if (Pages[0] < 1) or (Pages[1] > maxpages) or (Pages[0] > maxpages) or (Pages[1] < 1) or (Pages[0] > Pages[1]):
@@ -802,7 +803,7 @@ class Frame_PDFManipulator(wx.Frame):
         			return
         		passwd.Destroy()
         		    			
-        	print(EncryptionStrength==4)
+        	#print(EncryptionStrength==4)
 
         	# validation complete
         	
@@ -834,7 +835,15 @@ class Frame_PDFManipulator(wx.Frame):
         		dialog.ShowModal()
         		return    
         	# Get page Ranges
-        	maxpages = get_pages(InputFile)
+        	trymaxpages = get_pages(InputFile)
+        	if trymaxpages == False:
+        		dialog = wx.MessageDialog(self,f'Unable to get pages from file {trymaxpages[1]}',caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		dialgon.ShowModal()
+        		return 
+        		
+        	else:
+        		maxpages = trymaxpages
+        	
         	Pages = self.Text_Rotate_Pages.GetValue()
         	
         	# get the sane list of pages to rotate - if list is not sane (i.e isn't like 1-3,5,7,9-12 etc) then the function will return false
@@ -910,7 +919,12 @@ class Frame_PDFManipulator(wx.Frame):
         		return
         	# find the number of pages in both docs
         	
-        	maxpages = [get_pages(InputFile),get_pages(SubsFile)]
+        	trymaxpages = [get_pages(InputFile),get_pages(SubsFile)]
+        	if (trymaxpages[0][0] == False) or (trymaxpages[1][0] == False):
+        		dialog = wx.MessageDialog(self,f'Unable to get number of pages in file {trymaxpages[0][0]}:{trymaxpages[1][0]}',caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		return
+        	else:
+        		maxpages = [trymaxpages[0][1],trymaxpages[1][1]]
 
         	#print(maxpages)
         	#print(PageNo + maxpages[1])
