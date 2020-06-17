@@ -388,7 +388,7 @@ def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	
 	if trypdf[0] == False:
 		return (False,trypdf[1])
-	else
+	else:
 		pdf = trypdf[1]
 	
 	print(f'Opening {SUBS}')
@@ -398,12 +398,12 @@ def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	
 	if trypdf[0] == False:
 		return (False,trypdf[1])
-	else
+	else:
 		subpdf = trypdf[1]	
 	
 	
 	version = [pdf.pdf_version,subpdf.pdf_version]
-	pages = [get_pages(PDF_FILE),get_pages(SUBS)]
+	pages = [get_pages(PDF_FILE)[1],get_pages(SUBS)[1]]
 	print(f'Pages: {pages} Version: {version}')
 	
 	# Check if the replacement pages exceeds the end of the document

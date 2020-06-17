@@ -51,6 +51,10 @@ class FileDropEvent(wx.PyCommandEvent):
     	print(f'SetSingleItem:{item}')
     	# check if we have a file with a .pdf file ext
     	if item.lower()[-4:] == ".pdf":
+    		# reject item that cannot be opened - ideally we need to pop a message up to the user
+    		#dialog = wx.MessageDialog(self.Frame_PDFManipulator, "test", caption = "Error", style = wx.OK | wx.ICON_ERROR)
+    		#dialog.ShowModal()
+    		if TryOpenPDF(item)[0] == False: return
     		pdfitem = item
     	else:
     		print(f'Not a pdf:{item}')
@@ -66,6 +70,7 @@ class FileDropEvent(wx.PyCommandEvent):
         
     def AddItem(self, item):
         print(f'AddItem:{item}')
+        
         self._items.append(item)
         
     def AddItems(self, items):
@@ -80,10 +85,13 @@ class FileDropEvent(wx.PyCommandEvent):
         	print(f'item:{i}')
         	# if the item doesn't have the last 4 chars as .pdf then reject it otherwise add it to the sanitised list
         	if i.lower()[-4:] == ".pdf":
+        		# reject files that cannot be opened
+        		if TryOpenPDF(i)[0] == False: continue
         		pdfitems.append(i)
         	else:
         		print(f'Not a pdf:{i}')
         		continue
+        		
         #self._items += items
         # substitute the sanitised list for the one that was given
         self._items += pdfitems
@@ -339,13 +347,18 @@ class Frame_PDFManipulator(wx.Frame):
     	print(f'Dropped file rejected?: {pdf==""}')
     	if pdf != "" :
     		pages = get_pages(pdf)
-    		try:
-    			int(pages)
-    		except:
-    			dialog = wx.MessageDialog(self,pages, caption = "Error", style = wx.OK | wx.ICON_ERROR)
+    		# might be able to drop most of this if rule added into the DND Class above
+    		if pages[0] == False:
+    			dialog = wx.MessageDialog(self, pages[1], caption = "Error", style = wx.OK | wx.ICON_ERROR)
     			dialog.ShowModal()
+    			# blank out text
+    			#print(type(self))
+    			self.Text_Split_InputFile.SetValue("")
+    			self.Text_Split_InputFile.SetLabel("")
     			return
-    		self.Label_Split_Info.SetLabel(f'There are {pages} pages in this PDF')
+    		else:
+    			self.Label_Split_Info.SetLabel(f'There are {pages[1]} pages in this PDF')
+    			#print(type(self))
 	
     	
     def Event_Encrypt_FileDropped(self, event):
@@ -541,19 +554,38 @@ class Frame_PDFManipulator(wx.Frame):
     def Event_Button_Split_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
         self.OpenFile(self.Text_Split_InputFile)
-        
+        #print("file opened")
+        pages = get_pages(self.Text_Split_InputFile.GetValue())
+        if pages[0] == False:
+        	dialog = wx.MessageDialog(self,f'{pages[1]}',caption = "Error",style = wx.OK | wx.ICON_ERROR)
+        	dialog.ShowModal()
+        	self.Text_Split_InputFile.SetValue("")
+        	self.Label_Split_Info.SetLabel("")
+        	return
+        else:
+        	self.Label_Split_Info.SetLabel(f'There are {pages[1]} pages in this PDF')
         event.Skip()
 
     def Event_Button_Join_SelectFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        self.OpenFiles(self.Listbox_Join_Files)		
+        beforecount = self.Listbox_Join_Files.GetCount()
+        self.OpenFiles(self.Listbox_Join_Files)
+        aftercount = self.Listbox_Join_Files.GetCount()
+        print(f'Before: {beforecount}; After: {aftercount}')
         
+        ## check if and how many new files added to the listbox so that any invalid files can be stripped
+        self.ListboxCheck(self.Listbox_Join_Files,beforecount,aftercount)
         event.Skip()
 
     def Event_Button_Join_SelectFolder(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show folder selection - additional processing requried to get the pdf files
+        beforecount = self.Listbox_Join_Files.GetCount()
         self.OpenFolder(self.Listbox_Join_Files)
+        aftercount = self.Listbox_Join_Files.GetCount()
+        print(f'Before: {beforecount}; After: {aftercount}')
         
+        ## check if and how many new files added to the listbox so that any invalid files can be stripped
+        self.ListboxCheck(self.Listbox_Join_Files,beforecount,aftercount)
         event.Skip()
 
     def Event_Listbox_Join_Files(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -842,7 +874,7 @@ class Frame_PDFManipulator(wx.Frame):
         		return 
         		
         	else:
-        		maxpages = trymaxpages
+        		maxpages = trymaxpages[1]
         	
         	Pages = self.Text_Rotate_Pages.GetValue()
         	
@@ -1015,6 +1047,22 @@ class Frame_PDFManipulator(wx.Frame):
     		return pathname[:-4]
     	return pathname	
     	
+    def ListboxCheck(self,control,before,after):
+    	if after > before:
+    		print(f'{after - before} Files added to listbox')
+    		for i in range(after-1,before-1,-1): # do it in reverse order so that each item can be deleted without some funky index adjustment
+    			print(i)
+    			print(control.GetString(i))
+    			#item = control.GetString(i)
+    			openable = TryOpenPDF(control.GetString(i))
+    			if openable[0] == False:
+    				dialog = wx.MessageDialog(self,openable[1],caption = "Error",style = wx.OK | wx.ICON_ERROR)
+    				dialog.ShowModal()
+    				print(f'Removing item {control.GetString(i)}')
+    				control.Delete(i)
+    				
+    				
+    				
 
 # end of class Frame_PDFManipulator
 
