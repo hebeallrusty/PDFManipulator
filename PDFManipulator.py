@@ -272,20 +272,13 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 			output = f'{OUT_DIR}{filename}({i+1}).pdf'
 			print(f'Writing file {output}')
 			
-			try:
-				doc.save(output,min_version=version)
-			except FileNotFoundError as e:
-				print(f'Output File not Found')
-				return ERRORS('SaveFileNotFound',e,filename = output)
-			except PermissionError as e:
-				print(f'Permission Error')
-				return ERRORS('Permission',e,filename = output)
-			except IOError as e:
-				print(f'Input / Output Error')
-				return ERRORS('IO',e,filename = output)
-			except Exception as e:
-				print(e.__class__)
-				return e
+			savetest = TrySavePDF(doc,output,Version = version)
+			#print(type(savetest))
+			if savetest[0] == False:
+				return (False,savetest[1])
+			else:
+				return (True,None)
+
 			
 	else:
 		# create new output object
@@ -299,23 +292,15 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	
 		output = f'{OUT_DIR}{filename}.pdf'
 		print(f'Writing file {output}')
-		try:
-			doc.save(output,min_version=version)
-		except FileNotFoundError as e:
-			print(f'Output File not Found')
-			return ERRORS('SaveFileNotFound',e,filename = output)
-		except PermissionError as e:
-			print(f'Permission Error')
-			return ERRORS('Permission',e,filename = output)
-		except IOError as e:
-			print(f'Input / Output Error')
-			return ERRORS('IO',e,filename=output)
-		except Exception as e:
-			print(e.__class__)
-			return e
-	
-	# if we got here, then we must have run successfully - return True to let caller know we were successful	
-	return True
+
+		
+		savetest = TrySavePDF(doc,output,Version=version)
+		print(f'TrySavePDF:{savetest[0]}')
+		if savetest[0] == False:
+			return (False,savetest[1])
+		else:
+			# if we got here, then we must have run successfully - return True to let caller know we were successful	
+			return (True,None)
 	
 
 def join(PDF_FILES,OUT_FILENAME,folder=False):
@@ -326,6 +311,7 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 	# initiate the new pdf object which will be the output
 	doc = pikepdf.Pdf.new()
 	version = doc.pdf_version
+	print(type(version))
 	# if we are dealing with a folder - get all the pdf's in that folder and convert that into the PDF_FILES
 	if folder == True:
 		print(f'getting all PDF files in {PDF_FILES}')
@@ -356,9 +342,13 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 		docmeta['xmp:CreateDate'] = pdf_timestamp()	
 		docmeta['xmp:CreatorTool'] = pdf_creator()
 		docmeta['pdf:Producer'] = pdf_producer()
-	doc.save(OUT_FILENAME,min_version=version)
-	
-	return True
+
+	#doc.save(OUT_FILENAME,min_version=version)		
+	testsave = TrySavePDF(doc,OUT_FILENAME, Version = version)
+	if testsave[0] == False:
+		return (False,testsave[1])
+	else:
+		return (True,None)
 
 def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
 	# open pdf file
@@ -374,7 +364,14 @@ def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
 	output = f'{OUT_FILENAME}.pdf'
 	no_extracting = pikepdf.Permissions(extract=False)
 	print(f'Writing file {output}')
-	pdf.save(output,encryption = pikepdf.Encryption(user = Password, owner = Password[::-1], R=Strength, allow=no_extracting))
+	#pdf.save(output,encryption = pikepdf.Encryption(user = Password, owner = Password[::-1], R=Strength, allow=no_extracting))
+	
+	testsave = TrySavePDF(pdf,output,EncObj = pikepdf.Encryption(user = Password, owner = Password[::-1], R=Strength, allow=no_extracting))
+	
+	if testsave[0] == False:
+		return (False,testsave[1])
+	else:
+		return (True,None)
 
 def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	# substitute pages in PDF_FILE for those in Subs.
@@ -426,7 +423,14 @@ def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	output = f'{OUT_FILENAME}.pdf'
 	print(f'Writing file {output}')
 	# save the pdf with the greatest pdf version of both files	
-	pdf.save(output,min_version=max(version))
+	#pdf.save(output,min_version=max(version))
+	
+	testsave = TrySavePDF(pdf,output,Version = max(version))
+	
+	if testsave[0] == False:
+		return (False,testsave[1])
+	else:
+		return (True,None)
 	
 def TestEncryption(PDF_FILE,PASSWORD=""):
 	# check if the file has a password and cannot be opened. Return is True (is encrypted) or False (isn't encrypted or correct password)
@@ -468,7 +472,16 @@ def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
 	output = f'{OUT_FILENAME}.pdf'
 	print(f'Writing file {output}')
 	# save the pdf with the greatest pdf version of both files	
-	pdf.save(output)
+	#pdf.save(output)
+	
+	testsave = TrySavePDF(pdf,output,Version=pdf.pdf_version)
+	
+	if testsave[0] == False:
+		return (False,testsave[1])
+	else:
+		return (True,None)
+	
+	
 	
 def RemoveEncryption(PDF_FILE,OUT_FILENAME,PASSWORD):
 	# open pdf file
@@ -485,7 +498,14 @@ def RemoveEncryption(PDF_FILE,OUT_FILENAME,PASSWORD):
 	output = f'{OUT_FILENAME}.pdf'
 	#no_extracting = pikepdf.Permissions(extract=False)
 	print(f'Writing file {output}')
-	pdf.save(output)
+	#pdf.save(output)
+	
+	testsave = TrySavePDF(pdf,output,Version=pdf.pdf_version)
+	
+	if testsave[0] == False:
+		return (False,testsave[1])
+	else:
+		return (True,None)	
 	
 def TryOpenPDF(PDF_FILE,PASSWORD = ""):
 	# we want to wrap the opening of the PDF into a try/except statement as the file may not actually be openable
@@ -515,21 +535,43 @@ def TryOpenPDF(PDF_FILE,PASSWORD = ""):
 		print(e.__class__)
 		return (False,e)
 		
-#def TrySavePDF(PDF_FILE)
-
+def TrySavePDF(PDFobj,PDF_FILE,Version ='1.7',EncObj=None):
+	# wrap error routine to provide consistency between saved files
+	# returns a tuple with True/False as first item, and either None or error message relating to True/False)
+	
+	try:
+		print(f'Trying to save {PDF_FILE}')
+		# save file
+		print(f'File:{PDF_FILE}; Version:{Version}')
+		PDFobj.save(PDF_FILE, min_version = Version, encryption = EncObj)
+		# if successful, return True
+		return (True,None)
+	except FileNotFoundError as e:
+		print(f'Output File not Found')
+		return (False,ERRORS('SaveFileNotFound',e,filename = PDF_FILE))
+	except PermissionError as e:
+		print(f'Permission Error')
+		return (False,ERRORS('Permission',e,filename = PDF_FILE))
+	except IOError as e:
+		print(f'Input / Output Error')
+		return (False,ERRORS('IO',e,filename = PDF_FILE))
+	except Exception as e:
+		print(e.__class__)
+		return (False,e)
 
 # TESTS
-PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf#'
+#PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf'
 #SUBPDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/test.pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/emplaced(enc).pdf'
 #PDF = '/home/ashley/src/PDFManipulator/TestPDFs/c4611_sample_explain(ENC).pdf'
-#OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/test'
+#folder = '/home/ashley/src/PDFManipulator/TestPDFs/'
+#OutputFile = '/home/ashley/src/PDFManipulator/TestPDFs/test1'
 #OutputFile = '/'
 #print(TestEncryption(PDF,"blah"))
-#emplace(PDF,OutputFile,SUBPDF,2)
-#RemoveEncryption(PDF,OutputFile,"blah")
+#a = emplace(PDF,OutputFile,SUBPDF,2)
+#a = RemoveEncryption(PDF,OutputFile,"blah")
 #print(ConvertSimpleRange("1,3"))
 #pdf = TryOpenPDF(PDF)
 #if pdf[0] == True:
@@ -537,15 +579,18 @@ PDF = '/home/ashley/src/PDFManipulator/TestPDFs/file-example_PDF_500_kB.pdf#'
 #	print(len(pdf[1].pages))
 #else:
 #	print("ERROR")
-#RotatePages(PDF,OutputFile,ConvertRanges("1-3,5"),90)
+#a = RotatePages(PDF,OutputFile,ConvertMixedRanges("1-3,5"),90)
 #print(ConvertMixedRanges("1-3,5,9,12-18"))
 #print(get_pages(PDF))
-#a=split(PDF,OutputFile,(1,1),False)
+#a=split(PDF,OutputFile,(1,1),True)
 #print(a)
 #splittest(pdffile,outdir,(1,10))
 #print(get_filename(PDF))
-#join(folder,outfile,True)
+#a=join([PDF,SUBPDF],OutputFile,False)
+#print(a)
 #files_in_folder(folder)
+#a = encrypt(PDF,OutputFile,'blah',6)
+#print(a)
 #print(get_docinfo(PDF))
 #print(pdf_datetime())
 

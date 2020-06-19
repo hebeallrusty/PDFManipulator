@@ -751,15 +751,16 @@ class Frame_PDFManipulator(wx.Frame):
         	# carry out the split operation
         	self.Statusbar.SetStatusText(f'Working...',2)
         	result = split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice)
+        	
         	self.Statusbar.SetStatusText(f'',2)
         	
-        	if result == True:
+        	if result[0] == True:
         		# let the user know that the process has completed
         		dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
         		dialog.ShowModal()
         	else:
         		# there was an error and the result is the error message
-        		dialog = wx.MessageDialog(self,result,caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		dialog = wx.MessageDialog(self,result[1],caption = "Error", style = wx.OK | wx.ICON_ERROR)
         		dialog.ShowModal()
         	
         	#############################
@@ -776,11 +777,18 @@ class Frame_PDFManipulator(wx.Frame):
         	OutputFile = self.SaveFile()
         	
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	join(listbox,OutputFile)
+        	result = join(listbox,OutputFile)
         	self.Statusbar.SetStatusText(f'',2)
-         	# let the user know that the process has completed
-        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
-        	dialog.ShowModal()  
+
+        	if result[0] == True:
+        		# let the user know that the process has completed
+        		dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        		dialog.ShowModal()
+        	else:
+        		# there was an error and the result is the error message
+        		dialog = wx.MessageDialog(self,result[1],caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        	
         	 
         	#############################
         	#############################
@@ -844,15 +852,23 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	if EncryptionStrength != 0: # encrypt:
         		self.Statusbar.SetStatusText(f'Working...',2)
-        		encrypt(InputFile,OutputFile,password[0],EncryptionStrength)
+        		result = encrypt(InputFile,OutputFile,password[0],EncryptionStrength)
         		self.Statusbar.SetStatusText(f'',2)
+        		
         	else:
         		self.Statusbar.SetStatusText(f'Working...',2)
-        		RemoveEncryption(InputFile,OutputFile,password[0])
+        		result = RemoveEncryption(InputFile,OutputFile,password[0])
         		self.Statusbar.SetStatusText(f'',2)
-			# let the user know that the process has completed
-        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
-        	dialog.ShowModal()
+        	
+        	if result[0] == True:
+        		# let the user know that the process has completed
+        		dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        		dialog.ShowModal()
+        	else:
+        		# there was an error and the result is the error message
+        		dialog = wx.MessageDialog(self,result[1],caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        	
         	
         	#############################
         	#############################
@@ -911,11 +927,17 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# Call our rotation function
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	RotatePages(InputFile,OutputFile,PageList,Rotation)
+        	result = RotatePages(InputFile,OutputFile,PageList,Rotation)
         	self.Statusbar.SetStatusText(f'',2)
-        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
-        	dialog.ShowModal()        	
-        	#print("Done")
+        	if result[0] == True:
+        		# let the user know that the process has completed
+        		dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        		dialog.ShowModal()
+        	else:
+        		# there was an error and the result is the error message
+        		dialog = wx.MessageDialog(self,result[1],caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        	
         			
         	#############################
         	#############################
@@ -985,10 +1007,18 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# run script
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	emplace(InputFile,OutputFile,SubsFile,PageNo)
+        	result = emplace(InputFile,OutputFile,SubsFile,PageNo)
         	self.Statusbar.SetStatusText(f'',2)
-        	dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
-        	dialog.ShowModal()        	
+        	
+        	if result[0] == True:
+        		# let the user know that the process has completed
+        		dialog = wx.MessageDialog(self,f'Operation has Completed',caption = "Complete",  style = wx.OK | wx.ICON_INFORMATION)
+        		dialog.ShowModal()
+        	else:
+        		# there was an error and the result is the error message
+        		dialog = wx.MessageDialog(self,result[1],caption = "Error", style = wx.OK | wx.ICON_ERROR)
+        		dialog.ShowModal()
+        	       	
         	
         event.Skip()
 #######################################################################
