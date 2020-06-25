@@ -21,10 +21,12 @@ import subprocess
 
 PROGRAM_VERSION = version()
 PIKEPDF_VERSION = pikepdfversion()
-FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF"
+FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF;*PdF;*pDF"
 
 ENCRYPTION_STRENGTH = {0:6,1:4,2:0} # mapped to pikepdf levels
 REPO_URL = 'https://github.com/hebeallrusty/PDFManipulator/tree/master/dist'
+
+GBLPASSWORD = []
 
 #DND
 wxEVT_SPLITFILE_DROPPED = wx.NewEventType()
@@ -54,7 +56,33 @@ class FileDropEvent(wx.PyCommandEvent):
     		# reject item that cannot be opened - ideally we need to pop a message up to the user
     		#dialog = wx.MessageDialog(self.Frame_PDFManipulator, "test", caption = "Error", style = wx.OK | wx.ICON_ERROR)
     		#dialog.ShowModal()
-    		if TryOpenPDF(item)[0] == False: return
+    		trypdf = TryOpenPDF(item)
+    		if trypdf[0] == False: 
+    			# check if it's passworded then prompt for password. We then want to check if the password was correct before rejecting. Need to save the Password in a global variable (don't like - better way?)
+    			if 'password' in trypdf[1]:
+    				passerror = True
+    				print(f'Password required for {item}')
+    				# enter loop to keep getting password until it's correct
+    				while passerror == True:
+    					passwd = wx.PasswordEntryDialog(None, "File Password Protected. Enter Password:", f'Password dialog',"" ,style=wx.TextEntryDialogStyle)
+    					ans = passwd.ShowModal()
+    					# ok was pressed so check password
+    					if ans == wx.ID_OK:
+    						passerror = TestEncryption(item,passwd.GetValue())
+    						# TestEncryption will return true if there is a password error and false if it is cleared.
+    						if passerror == False:
+    								# password supplied is correct so store it for later
+    								
+    								global GBLPASSWORD 
+    								GBLPASSWORD = [passwd.GetValue()]
+    						
+    					else:
+    						print(f'Given up getting passwords')
+    						# return password error
+    						return (False,trypdf[1])
+    			else: 		
+    				# any other errors return and file is rejected
+    				return (False,trypdf[1])
     		pdfitem = item
     	else:
     		print(f'Not a pdf:{item}')
@@ -346,7 +374,8 @@ class Frame_PDFManipulator(wx.Frame):
     	pdf = self.Text_Split_InputFile.GetValue()
     	print(f'Dropped file rejected?: {pdf==""}')
     	if pdf != "" :
-    		pages = get_pages(pdf)
+    		print(GBLPASSWORD)
+    		pages = get_pages(pdf,GBLPASSWORD[0])
     		# might be able to drop most of this if rule added into the DND Class above
     		if pages[0] == False:
     			dialog = wx.MessageDialog(self, pages[1], caption = "Error", style = wx.OK | wx.ICON_ERROR)
@@ -723,7 +752,7 @@ class Frame_PDFManipulator(wx.Frame):
         		return
         	
         	# find what the biggest page number is to ensure our range fits with the PDF file
-        	trymaxpages = get_pages(InputFile)	
+        	trymaxpages = get_pages(InputFile,GBLPASSWORD[0])	
         	if trymaxpages[0] == False:
         		dialog = wx.MessageDialog(self,f'Unable to get number of pages from file. {trymaxpages[1]}',caption = "Error",style = wx.OK | wx.ICON_ERROR)
         		dialog.ShowModal()
@@ -750,7 +779,7 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# carry out the split operation
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	result = split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice)
+        	result = split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice,Passwd = GBLPASSWORD[0])
         	
         	self.Statusbar.SetStatusText(f'',2)
         	

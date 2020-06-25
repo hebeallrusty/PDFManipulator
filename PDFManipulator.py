@@ -32,9 +32,9 @@ def swap_item(alist,pos1,pos2):
 	alist[pos1],alist[pos2] = alist[pos2],alist[pos1]
 	return alist
 
-def get_pages(PDF_FILE):
+def get_pages(PDF_FILE,PASSWD=""):
 	# see if we can open the PDF file - return is a list
-	pdf = TryOpenPDF(PDF_FILE)
+	pdf = TryOpenPDF(PDF_FILE,PASSWD)
 	if pdf[0] == False:
 		return (False,pdf[1])
 	else:
@@ -59,9 +59,9 @@ def CheckUpdate():
         	return False
         		
 
-def get_docinfo(PDF_FILE):
+def get_docinfo(PDF_FILE,Passwd=""):
 	# open the pdf file
-	trypdf = TryOpenPDF(PDF_FILE)
+	trypdf = TryOpenPDF(PDF_FILE,Passwd)
 	if trypdf[0] == False:
 		return (False,trypdf[1])
 	else:
@@ -225,7 +225,7 @@ def ConvertSimpleRange(INPUT):
 	
 			
 
-def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
+def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False,Passwd=""):
 	# PDF_FILE must be a single PDF file
 	# OUT_DIR must be a folder where the files will be created
 	# PageRange must be a tuple containing start and end pages
@@ -236,7 +236,7 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	
 	# check if we can open the file - main errors are file is missing, or is the password is wrong. Current implementation doesn't allow for unlock password in this module. Anything that isn't caught returns the generic error
 
-	trypdf = TryOpenPDF(PDF_FILE)
+	trypdf = TryOpenPDF(PDF_FILE,Passwd)
 	if trypdf[0] == False:
 		return (False,trypdf[1])
 	else:
@@ -244,7 +244,7 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False):
 	
 	# document is openable so next command will succeed so just receive the object
 	print(f'Getting Document Properties')
-	meta = get_docinfo(PDF_FILE)[1]
+	meta = get_docinfo(PDF_FILE,Passwd)[1]
 	version = pdf.pdf_version
 	print(f'PDF Version {version}')
 	
