@@ -26,7 +26,10 @@ FILE_WILDCARD = "PDF Files (*.pdf)|*.pdf;*.PDF;*Pdf;*PDf;*pDf;*pdF;*PdF;*pDF"
 ENCRYPTION_STRENGTH = {0:6,1:4,2:0} # mapped to pikepdf levels
 REPO_URL = 'https://github.com/hebeallrusty/PDFManipulator/tree/master/dist'
 
-GBLPASSWORD = []
+# to be used to save the password on drag and drop as we don't have access to the field it was dropped into
+GBLPASSWORD = ['']
+# dict to use to store the password for each file source. Split requires single PW but Join requires a list, Emplace has two files
+GBLPASSWORDDICT = {'Split':'','Join':'','Encrypt':'','Rotate':'','EmplaceSource':'','EmplaceSub':''}
 
 #DND
 wxEVT_SPLITFILE_DROPPED = wx.NewEventType()
@@ -49,40 +52,22 @@ class FileDropEvent(wx.PyCommandEvent):
         self._items = []
         
     def SetSingleItem(self, item):
-    	#print(f'self:{self}')
+
     	print(f'SetSingleItem:{item}')
     	# check if we have a file with a .pdf file ext
     	if item.lower()[-4:] == ".pdf":
-    		# reject item that cannot be opened - ideally we need to pop a message up to the user
-    		#dialog = wx.MessageDialog(self.Frame_PDFManipulator, "test", caption = "Error", style = wx.OK | wx.ICON_ERROR)
-    		#dialog.ShowModal()
-    		trypdf = TryOpenPDF(item)
-    		if trypdf[0] == False: 
-    			# check if it's passworded then prompt for password. We then want to check if the password was correct before rejecting. Need to save the Password in a global variable (don't like - better way?)
-    			if 'password' in trypdf[1]:
-    				passerror = True
-    				print(f'Password required for {item}')
-    				# enter loop to keep getting password until it's correct
-    				while passerror == True:
-    					passwd = wx.PasswordEntryDialog(None, "File Password Protected. Enter Password:", f'Password dialog',"" ,style=wx.TextEntryDialogStyle)
-    					ans = passwd.ShowModal()
-    					# ok was pressed so check password
-    					if ans == wx.ID_OK:
-    						passerror = TestEncryption(item,passwd.GetValue())
-    						# TestEncryption will return true if there is a password error and false if it is cleared.
-    						if passerror == False:
-    								# password supplied is correct so store it for later
-    								
-    								global GBLPASSWORD 
-    								GBLPASSWORD = [passwd.GetValue()]
-    						
-    					else:
-    						print(f'Given up getting passwords')
-    						# return password error
-    						return (False,trypdf[1])
-    			else: 		
-    				# any other errors return and file is rejected
-    				return (False,trypdf[1])
+    		# reject item that cannot be opened 
+			
+			# carry out a test of if the file is openable, and if not give user input. If it's a password error, get the password
+    		# function is in the main loop
+    		result = Frame_PDFManipulator.GetSource(self,item)
+
+    		#print(f'result is {result}')
+    		if result == False:
+    			# if we failed - return nothing
+    			return
+    		
+    		# otherwise return the item for further processing
     		pdfitem = item
     	else:
     		print(f'Not a pdf:{item}')
@@ -365,17 +350,32 @@ class Frame_PDFManipulator(wx.Frame):
     #DND
     def Event_Split_FileDropped(self, event):
     	print("SPLIT DROP")
-    	#print(dir(event))
-    	#print(event.GetEventObject)
-    	#print(dir(event))
+
+    	# reset PW parameters
+    	#global GBLPASSWORD 
+    	#GBLPASSWORD = ['']
+    	global GBLPASSWORDDICT
+    	print(f'Resetting GBLPASSWORDDICT')
+    	GBLPASSWORDDICT['Split'] = ''
+    	
+    	# clear page info that is displayed
     	self.Label_Split_Info.SetLabel(f'')
+    	
+    	# get the filename that is dropped and put it in the text box
     	self.Text_Split_InputFile.ChangeValue(event.GetSingleItem())
     	# check if the input file control is blank, and if not then advise how many pages there are in the pdf
+    	
+    	# update the password if one was given
+    	#if not GBLPASSWORD:
+    	print(f'GBLPASSWORD is: {GBLPASSWORD[0]}')
+    	GBLPASSWORDDICT['Split'] = GBLPASSWORD[0]
+    	
+    	# get file name from the control
     	pdf = self.Text_Split_InputFile.GetValue()
     	print(f'Dropped file rejected?: {pdf==""}')
     	if pdf != "" :
-    		print(GBLPASSWORD)
-    		pages = get_pages(pdf,GBLPASSWORD[0])
+    		print(GBLPASSWORDDICT)
+    		pages = get_pages(pdf,GBLPASSWORDDICT['Split'])
     		# might be able to drop most of this if rule added into the DND Class above
     		if pages[0] == False:
     			dialog = wx.MessageDialog(self, pages[1], caption = "Error", style = wx.OK | wx.ICON_ERROR)
@@ -392,19 +392,43 @@ class Frame_PDFManipulator(wx.Frame):
     	
     def Event_Encrypt_FileDropped(self, event):
     	print("ENCRYPT DROP")
-    	self.Text_Encrypt_InputFile.ChangeValue(event.GetSingleItem())   
+    	# reset PW params
+    	global GBLPASSWORDDICT
+    	GBLPASSWORDDICT['Encrypt'] = ''
+    	# populate text box with filename
+    	self.Text_Encrypt_InputFile.ChangeValue(event.GetSingleItem())
+    	
+    	# put password into dict
+    	GBLPASSWORDDICT['Encrypt'] = GBLPASSWORD[0]   
     
     def Event_Substitute_InputFileDropped(self,event):
     	print("SUBS INPUT DROP")
+    	global GBLPASSWORDDICT
+    	GBLPASSWORDDICT['EmplaceSource'] = ''
+    	#global 
     	self.Text_Substitute_InputFile.ChangeValue(event.GetSingleItem())
+    	
+    	# put password into dict
+    	GBLPASSWORDDICT['EmplaceSource'] = GBLPASSWORD[0]
     
     def Event_Substitute_SubFileDropped(self,event):
     	print("SUBS SUB DROP")
+    	global GBLPASSWORDDICT
+    	GBLPASSWORDDICT['EmplaceSub'] = ''
+    	
     	self.Text_Substitute_SubstituteFile.ChangeValue(event.GetSingleItem())
+    	
+    	# put password into dict
+    	GBLPASSWORDDICT['EmplaceSub'] = GBLPASSWORD[0]
 
     def Event_RotateFileDropped(self,event):
     	print("Rotate DROP")
+    	global GBLPASSWORDDICT
+    	GBLPASSWORDDICT['Rotate'] = ''
     	self.Text_Rotate_InputFile.ChangeValue(event.GetSingleItem())
+    	
+    	# put password into dict
+    	GBLPASSWORDDICT['Rotate'] = GBLPASSWORD[0]
     	
     def _onMultiFilesDropped(self, evt):
         self.Listbox_Join_Files.Append(evt.GetItems())
@@ -582,9 +606,21 @@ class Frame_PDFManipulator(wx.Frame):
 
     def Event_Button_Split_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        self.OpenFile(self.Text_Split_InputFile)
+        # GBLPASSWORD will be '' by default. Blanking out here means that if the user cancels opening a file, the password would be lost
+        global GBLPASSWORDDICT
+        #GBLPASSWORDDICT['Split'] = ''
+                
+        # call to get a source file
+        result = self.OpenFile(self.Text_Split_InputFile)
+        # return will be True or False depeneding
+        if result == False:
+        	return # failed to get a file
+        	
+        # put any passwords into the right dict
+        GBLPASSWORDDICT['Split'] = GBLPASSWORD[0]
+        
         #print("file opened")
-        pages = get_pages(self.Text_Split_InputFile.GetValue())
+        pages = get_pages(self.Text_Split_InputFile.GetValue(),GBLPASSWORDDICT['Split'])
         if pages[0] == False:
         	dialog = wx.MessageDialog(self,f'{pages[1]}',caption = "Error",style = wx.OK | wx.ICON_ERROR)
         	dialog.ShowModal()
@@ -702,26 +738,55 @@ class Frame_PDFManipulator(wx.Frame):
 
     def Event_Button_Encrypt_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-        self.OpenFile(self.Text_Encrypt_InputFile)
+        global GBLPASSWORDDICT
+        #GBLPASSWORDDICT['Encrypt'] = ''
+                
+        # call to get a source file
+        result = self.OpenFile(self.Text_Encrypt_InputFile)
+        
+        if result == False:
+        	return
+        
+        GBLPASSWORDDICT['Encrypt'] = GBLPASSWORD[0]
 
         event.Skip()
 
     def Event_Button_Substitute_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-       	self.OpenFile(self.Text_Substitute_InputFile)
+    	global GBLPASSWORDDICT
+    	
+    	result = self.OpenFile(self.Text_Substitute_InputFile)
        	
-        event.Skip()
+    	if result == False:
+       		return
+       	
+    	GBLPASSWORDDICT['EmplaceSource'] = GBLPASSWORD[0]
+       	
+    	event.Skip()
 
     def Event_Button_Substitute_Substitute(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-       	self.OpenFile(self.Text_Substitute_SubstituteFile)
+        global GBLPASSWORDDICT
+        
+       	result = self.OpenFile(self.Text_Substitute_SubstituteFile)
+
+       	if result == False:
+       		return
        	
+       	GBLPASSWORDDICT['EmplaceSub'] = GBLPASSWORD[0]
+       	       	
         event.Skip()
 
 
     def Event_Button_Rotate_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
-       	self.OpenFile(self.Text_Rotate_InputFile)
-
+        global GBLPASSWORDDICT
+        
+       	result = self.OpenFile(self.Text_Rotate_InputFile)
+       	if result == False:
+       		return
+       	
+       	GBLPASSWORDDICT['Rotate'] = GBLPASSWORD[0]
+       	       	
         event.Skip()
 
     def Event_Notebook_Page_Changed(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -730,6 +795,7 @@ class Frame_PDFManipulator(wx.Frame):
 
     def Event_Button_Panel_Go(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # get which page currently has focus so that we can split execution into the relevant sections
+        print(GBLPASSWORDDICT)
 
         NotebookPage = self.Notebook_Panel.GetPageText(self.Notebook_Panel.GetSelection())
         #OutputFile = self.Text_Panel_SelectOutputFile.GetValue()
@@ -752,7 +818,7 @@ class Frame_PDFManipulator(wx.Frame):
         		return
         	
         	# find what the biggest page number is to ensure our range fits with the PDF file
-        	trymaxpages = get_pages(InputFile,GBLPASSWORD[0])	
+        	trymaxpages = get_pages(InputFile,GBLPASSWORDDICT['Split'])	
         	if trymaxpages[0] == False:
         		dialog = wx.MessageDialog(self,f'Unable to get number of pages from file. {trymaxpages[1]}',caption = "Error",style = wx.OK | wx.ICON_ERROR)
         		dialog.ShowModal()
@@ -779,7 +845,7 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# carry out the split operation
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	result = split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice,Passwd = GBLPASSWORD[0])
+        	result = split(InputFile,OutputFile,Pages,dismantle = OutputFileChoice,OpenPassword = GBLPASSWORDDICT['Split'])
         	
         	self.Statusbar.SetStatusText(f'',2)
         	
@@ -855,22 +921,8 @@ class Frame_PDFManipulator(wx.Frame):
         			dialog.ShowModal()
         			return
         	else: # user wants to decrypt file
-        		# get the user to enter password
-        		passwd = wx.PasswordEntryDialog(self, "Enter Unlock Password:", f'Password Unlock',"" ,style=wx.TextEntryDialogStyle)
-        		ans = passwd.ShowModal()
-        		if ans == wx.ID_OK:
-        			print(passwd.GetValue())
-        			# if password is false throw an error, if it's true, then add password to the list
-        			if TestEncryption(InputFile,passwd.GetValue()) == True:
+        		pass # password is already received from point of entry
 
-        				dialog = wx.MessageDialog(self,f'Incorrect Password',caption = "Unlock Error",style = wx.OK | wx.ICON_ERROR)
-        				dialog.ShowModal()
-        				return
-        			else:
-        				password.append(passwd.GetValue())
-        		else:
-        			return
-        		passwd.Destroy()
         		    			
         	#print(EncryptionStrength==4)
 
@@ -881,12 +933,12 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	if EncryptionStrength != 0: # encrypt:
         		self.Statusbar.SetStatusText(f'Working...',2)
-        		result = encrypt(InputFile,OutputFile,password[0],EncryptionStrength)
+        		result = encrypt(InputFile,OutputFile,password[0],EncryptionStrength,OpenPassword = GBLPASSWORDDICT['Encrypt'])
         		self.Statusbar.SetStatusText(f'',2)
         		
         	else:
         		self.Statusbar.SetStatusText(f'Working...',2)
-        		result = RemoveEncryption(InputFile,OutputFile,password[0])
+        		result = RemoveEncryption(InputFile,OutputFile,GBLPASSWORDDICT['Encrypt'])
         		self.Statusbar.SetStatusText(f'',2)
         	
         	if result[0] == True:
@@ -912,7 +964,7 @@ class Frame_PDFManipulator(wx.Frame):
         		dialog.ShowModal()
         		return    
         	# Get page Ranges
-        	trymaxpages = get_pages(InputFile)
+        	trymaxpages = get_pages(InputFile,GBLPASSWORDDICT['Rotate'])
         	if trymaxpages == False:
         		dialog = wx.MessageDialog(self,f'Unable to get pages from file {trymaxpages[1]}',caption = "Error", style = wx.OK | wx.ICON_ERROR)
         		dialgon.ShowModal()
@@ -956,7 +1008,7 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# Call our rotation function
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	result = RotatePages(InputFile,OutputFile,PageList,Rotation)
+        	result = RotatePages(InputFile,OutputFile,PageList,Rotation,OpenPassword = GBLPASSWORDDICT['Rotate'])
         	self.Statusbar.SetStatusText(f'',2)
         	if result[0] == True:
         		# let the user know that the process has completed
@@ -972,6 +1024,7 @@ class Frame_PDFManipulator(wx.Frame):
         	#############################
         	############################# 
         if NotebookPage == "Substitute Pages":
+        	print(GBLPASSWORDDICT)
 
         	InputFile = self.Text_Substitute_InputFile.GetValue()
 			
@@ -1001,16 +1054,15 @@ class Frame_PDFManipulator(wx.Frame):
         		dialog.ShowModal()
         		return
         	# find the number of pages in both docs
-        	
-        	trymaxpages = [get_pages(InputFile),get_pages(SubsFile)]
+        	print('here')
+        	trymaxpages = [get_pages(InputFile,GBLPASSWORDDICT['EmplaceSource']),get_pages(SubsFile,GBLPASSWORDDICT['EmplaceSub'])]
+        	print(trymaxpages)
         	if (trymaxpages[0][0] == False) or (trymaxpages[1][0] == False):
         		dialog = wx.MessageDialog(self,f'Unable to get number of pages in file {trymaxpages[0][0]}:{trymaxpages[1][0]}',caption = "Error", style = wx.OK | wx.ICON_ERROR)
         		return
         	else:
         		maxpages = [trymaxpages[0][1],trymaxpages[1][1]]
 
-        	#print(maxpages)
-        	#print(PageNo + maxpages[1])
         	# Validate Page number
         	if (PageNo < 1):
         		dialog = wx.MessageDialog(self,f'Page Number must be 1 or greater',caption = "Page Error",style = wx.OK | wx.ICON_ERROR)
@@ -1036,7 +1088,7 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# run script
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	result = emplace(InputFile,OutputFile,SubsFile,PageNo)
+        	result = emplace(InputFile,OutputFile,SubsFile,PageNo,OpenPasswordSource = GBLPASSWORDDICT['EmplaceSource'],OpenPasswordSub = GBLPASSWORDDICT['EmplaceSub'])
         	self.Statusbar.SetStatusText(f'',2)
         	
         	if result[0] == True:
@@ -1060,7 +1112,16 @@ class Frame_PDFManipulator(wx.Frame):
         	
         	# put the file path into the text control
         	pathname = fileDialog.GetPath()
+        	
+        	# check if we can actually open the file, and if not, throw an error
+        	result = self.GetSource(pathname) # if a password was given, it's in GBLPASSWORD
+        	
+        	if result == False:
+        		return False
+        	
         	control.SetValue(pathname)
+        	
+    	return True
         	
     def OpenFiles(self,control):
     	with wx.FileDialog(self,"Open PDF File", wildcard = FILE_WILDCARD, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_CHANGE_DIR | wx.FD_MULTIPLE) as fileDialog:
@@ -1119,8 +1180,49 @@ class Frame_PDFManipulator(wx.Frame):
     				dialog.ShowModal()
     				print(f'Removing item {control.GetString(i)}')
     				control.Delete(i)
-    				
-    				
+    
+    def GetSource(self,filename):
+    	# this will try to open the source pdf file, and if it errors out show an error. If it's passworded, get password. Return True if it was successful and False otherwise. Return password into global variable for processing later
+    	global GBLPASSWORD
+    	GBLPASSWORD = ['']
+    	print(f'GetPass: {filename}')
+    	# try to open the pdf - return is a tuple either True, or False with errors listed in index 1
+    	trypdf = TryOpenPDF(filename)
+    		
+    	# an error occured
+    	if trypdf[0] == False: 
+    		# check if it's passworded then prompt for password. We then want to check if the password was correct before rejecting. Need to save the Password in a global variable
+    		if 'password' in trypdf[1]:
+    			# keep track if there is a password error for an infinte loop until either correct password is supplied, or user gives up
+    			passerror = True
+    			print(f'Password required for {filename}')
+    			# enter loop to keep getting password until it's correct
+    			while passerror == True:
+    				# enter loop and request password
+    				passwd = wx.PasswordEntryDialog(None, "File Password Protected. Enter Password:", f'Password dialog',"" ,style=wx.TextEntryDialogStyle)
+    				ans = passwd.ShowModal()
+    				# ok was pressed so check password
+    				if ans == wx.ID_OK:
+    					# check if the password is correct
+    					passerror = TestEncryption(filename,passwd.GetValue())
+    					# TestEncryption will return true if there is a password error and false if it is cleared.
+    					if passerror == False:
+    						# password supplied is correct so store it for later
+    						GBLPASSWORD = [passwd.GetValue()]
+    						return True
+    						
+    				else: # we clicked cancel and therefore gave up
+    					print(f'Given up getting passwords')
+    					# return password error
+    					dialog = wx.MessageDialog(None,f'{trypdf[1]}',caption = "Error",style = wx.OK | wx.ICON_ERROR)
+    					dialog.ShowModal()
+    					return False
+    		else: # error thrown was not password related - let the user know what it was and quit
+    			dialog = wx.MessageDialog(None,f'{trypdf[1]}',caption = "Error",style = wx.OK | wx.ICON_ERROR)
+    			dialog.ShowModal()
+    			return False
+    	return True # no error was given
+    						
     				
 
 # end of class Frame_PDFManipulator

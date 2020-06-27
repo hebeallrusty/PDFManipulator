@@ -225,7 +225,7 @@ def ConvertSimpleRange(INPUT):
 	
 			
 
-def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False,Passwd=""):
+def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False,OpenPassword=""):
 	# PDF_FILE must be a single PDF file
 	# OUT_DIR must be a folder where the files will be created
 	# PageRange must be a tuple containing start and end pages
@@ -236,7 +236,7 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False,Passwd=""):
 	
 	# check if we can open the file - main errors are file is missing, or is the password is wrong. Current implementation doesn't allow for unlock password in this module. Anything that isn't caught returns the generic error
 
-	trypdf = TryOpenPDF(PDF_FILE,Passwd)
+	trypdf = TryOpenPDF(PDF_FILE,OpenPassword)
 	if trypdf[0] == False:
 		return (False,trypdf[1])
 	else:
@@ -244,7 +244,7 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False,Passwd=""):
 	
 	# document is openable so next command will succeed so just receive the object
 	print(f'Getting Document Properties')
-	meta = get_docinfo(PDF_FILE,Passwd)[1]
+	meta = get_docinfo(PDF_FILE,OpenPassword)[1]
 	version = pdf.pdf_version
 	print(f'PDF Version {version}')
 	
@@ -350,12 +350,12 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 	else:
 		return (True,None)
 
-def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
+def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength,OpenPassword = ''):
 	# open pdf file
 	
 	print(f'Opening {PDF_FILE}')
 	#pdf = pikepdf.Pdf.open(PDF_FILE)
-	trypdf = TryOpenPDF(PDF_FILE)
+	trypdf = TryOpenPDF(PDF_FILE,OpenPassword)
 	if trypdf[0] == False:
 		return (False,trypdf[1])
 	else:
@@ -373,15 +373,16 @@ def encrypt(PDF_FILE,OUT_FILENAME,Password,Strength):
 	else:
 		return (True,None)
 
-def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
+def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE,OpenPasswordSource = '', OpenPasswordSub = ''):
 	# substitute pages in PDF_FILE for those in Subs.
 	# Pages are zero indexed (i.e pdf page 1 is Page=0)
 	# currently only does one page but plan for whole sub document
 	
+	
 	print(f'Opening {PDF_FILE}')
 	#pdf = pikepdf.Pdf.open(PDF_FILE)
 	
-	trypdf = TryOpenPDF(PDF_FILE)
+	trypdf = TryOpenPDF(PDF_FILE,OpenPasswordSource)
 	
 	if trypdf[0] == False:
 		return (False,trypdf[1])
@@ -389,9 +390,9 @@ def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 		pdf = trypdf[1]
 	
 	print(f'Opening {SUBS}')
-	subpdf = pikepdf.Pdf.open(SUBS)
+	#subpdf = pikepdf.Pdf.open(SUBS)
 	
-	trypdf = TryOpenPDF(SUBS)
+	trypdf = TryOpenPDF(SUBS,OpenPasswordSub)
 	
 	if trypdf[0] == False:
 		return (False,trypdf[1])
@@ -400,7 +401,7 @@ def emplace(PDF_FILE,OUT_FILENAME,SUBS,PAGE):
 	
 	
 	version = [pdf.pdf_version,subpdf.pdf_version]
-	pages = [get_pages(PDF_FILE)[1],get_pages(SUBS)[1]]
+	pages = [get_pages(PDF_FILE,OpenPasswordSource)[1],get_pages(SUBS,OpenPasswordSub)[1]]
 	print(f'Pages: {pages} Version: {version}')
 	
 	# Check if the replacement pages exceeds the end of the document
@@ -444,7 +445,7 @@ def TestEncryption(PDF_FILE,PASSWORD=""):
 	else:
 		return False
 		
-def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
+def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation,OpenPassword = ''):
 	# Rotates a Page in the PDF
 	# Pages is a list containing the pages to rotate
 	# Rotation is an angle clockwise at [90,180,270]
@@ -455,7 +456,7 @@ def RotatePages(PDF_FILE,OUT_FILENAME,Pages,Rotation):
 	print(f'Opening {PDF_FILE}')
 	#pdf = pikepdf.Pdf.open(PDF_FILE)
 	
-	trypdf = TryOpenPDF(PDF_FILE)
+	trypdf = TryOpenPDF(PDF_FILE,OpenPassword)
 	
 	if trypdf[0] == False:
 		return (False,trypdf[1])
