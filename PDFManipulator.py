@@ -303,7 +303,7 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False,OpenPassword=""):
 			return (True,None)
 	
 
-def join(PDF_FILES,OUT_FILENAME,folder=False):
+def join(PDF_FILES,OUT_FILENAME,OpenPassword,folder=False):
 	# PDF_FILES must be a list of files or a folder of pdf files (must use folder=True to denote Folder)
 	# OUT_FILENAME is the file that will be created
 	# folder is the switch to denote tha PDF_FILES is actually a folder
@@ -318,11 +318,11 @@ def join(PDF_FILES,OUT_FILENAME,folder=False):
 		# TODO check for problems here!!
 		PDF_FILES = files_in_folder(PDF_FILES)
 
-	for PDF in PDF_FILES:
+	for i,PDF in enumerate(PDF_FILES):
 		print(f'Opening {PDF}')
 		# Open source document
 		#pdf = pikepdf.Pdf.open(PDF)
-		trypdf = TryOpenPDF(PDF)
+		trypdf = TryOpenPDF(PDF,OpenPassword[i])
 		if trypdf[0] == False:
 			return (False,trypdf[1])
 		else:

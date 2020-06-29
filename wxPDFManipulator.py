@@ -27,9 +27,9 @@ ENCRYPTION_STRENGTH = {0:6,1:4,2:0} # mapped to pikepdf levels
 REPO_URL = 'https://github.com/hebeallrusty/PDFManipulator/tree/master/dist'
 
 # to be used to save the password on drag and drop as we don't have access to the field it was dropped into
-GBLPASSWORD = ['']
+GBLPASSWORD = ''
 # dict to use to store the password for each file source. Split requires single PW but Join requires a list, Emplace has two files
-GBLPASSWORDDICT = {'Split':'','Join':'','Encrypt':'','Rotate':'','EmplaceSource':'','EmplaceSub':''}
+GBLPASSWORDDICT = {'Split':'','Join':[],'Encrypt':'','Rotate':'','EmplaceSource':'','EmplaceSub':''}
 
 #DND
 wxEVT_SPLITFILE_DROPPED = wx.NewEventType()
@@ -87,6 +87,7 @@ class FileDropEvent(wx.PyCommandEvent):
         self._items.append(item)
         
     def AddItems(self, items):
+        global GBLPASSWORDDICT
         print(f'AddItemS:{items}')
         # need to sanity check that we are not adding items willy nilly and that they are have pdf as file ext.
         
@@ -98,9 +99,18 @@ class FileDropEvent(wx.PyCommandEvent):
         	print(f'item:{i}')
         	# if the item doesn't have the last 4 chars as .pdf then reject it otherwise add it to the sanitised list
         	if i.lower()[-4:] == ".pdf":
-        		# reject files that cannot be opened
-        		if TryOpenPDF(i)[0] == False: continue
-        		pdfitems.append(i)
+        		# reject files that cannot be opened, or if incorrect password is supplied
+        		
+        		#if TryOpenPDF(i)[0] == False: continue
+        		result = Frame_PDFManipulator.GetSource(self,i)
+        		
+        		if result == True:
+        			pdfitems.append(i)
+       				GBLPASSWORDDICT['Join'].append(GBLPASSWORD)
+        			
+        		else:
+        			# file is to be rejected
+        			continue
         	else:
         		print(f'Not a pdf:{i}')
         		continue
@@ -352,8 +362,7 @@ class Frame_PDFManipulator(wx.Frame):
     	print("SPLIT DROP")
 
     	# reset PW parameters
-    	#global GBLPASSWORD 
-    	#GBLPASSWORD = ['']
+
     	global GBLPASSWORDDICT
     	print(f'Resetting GBLPASSWORDDICT')
     	GBLPASSWORDDICT['Split'] = ''
@@ -367,8 +376,8 @@ class Frame_PDFManipulator(wx.Frame):
     	
     	# update the password if one was given
     	#if not GBLPASSWORD:
-    	print(f'GBLPASSWORD is: {GBLPASSWORD[0]}')
-    	GBLPASSWORDDICT['Split'] = GBLPASSWORD[0]
+    	print(f'GBLPASSWORD is: {GBLPASSWORD}')
+    	GBLPASSWORDDICT['Split'] = GBLPASSWORD
     	
     	# get file name from the control
     	pdf = self.Text_Split_InputFile.GetValue()
@@ -399,7 +408,7 @@ class Frame_PDFManipulator(wx.Frame):
     	self.Text_Encrypt_InputFile.ChangeValue(event.GetSingleItem())
     	
     	# put password into dict
-    	GBLPASSWORDDICT['Encrypt'] = GBLPASSWORD[0]   
+    	GBLPASSWORDDICT['Encrypt'] = GBLPASSWORD  
     
     def Event_Substitute_InputFileDropped(self,event):
     	print("SUBS INPUT DROP")
@@ -409,7 +418,7 @@ class Frame_PDFManipulator(wx.Frame):
     	self.Text_Substitute_InputFile.ChangeValue(event.GetSingleItem())
     	
     	# put password into dict
-    	GBLPASSWORDDICT['EmplaceSource'] = GBLPASSWORD[0]
+    	GBLPASSWORDDICT['EmplaceSource'] = GBLPASSWORD
     
     def Event_Substitute_SubFileDropped(self,event):
     	print("SUBS SUB DROP")
@@ -419,7 +428,7 @@ class Frame_PDFManipulator(wx.Frame):
     	self.Text_Substitute_SubstituteFile.ChangeValue(event.GetSingleItem())
     	
     	# put password into dict
-    	GBLPASSWORDDICT['EmplaceSub'] = GBLPASSWORD[0]
+    	GBLPASSWORDDICT['EmplaceSub'] = GBLPASSWORD
 
     def Event_RotateFileDropped(self,event):
     	print("Rotate DROP")
@@ -428,11 +437,12 @@ class Frame_PDFManipulator(wx.Frame):
     	self.Text_Rotate_InputFile.ChangeValue(event.GetSingleItem())
     	
     	# put password into dict
-    	GBLPASSWORDDICT['Rotate'] = GBLPASSWORD[0]
+    	GBLPASSWORDDICT['Rotate'] = GBLPASSWORD
     	
     def _onMultiFilesDropped(self, evt):
         self.Listbox_Join_Files.Append(evt.GetItems())
         self.Listbox_Join_Files.EnsureVisible(self.Listbox_Join_Files.GetCount()-1)
+        print(GBLPASSWORDDICT['Join'])
 
 
     def __set_properties(self):
@@ -608,7 +618,6 @@ class Frame_PDFManipulator(wx.Frame):
         # show file selection, then put file path and name into Text_Split_InputFile
         # GBLPASSWORD will be '' by default. Blanking out here means that if the user cancels opening a file, the password would be lost
         global GBLPASSWORDDICT
-        #GBLPASSWORDDICT['Split'] = ''
                 
         # call to get a source file
         result = self.OpenFile(self.Text_Split_InputFile)
@@ -617,7 +626,7 @@ class Frame_PDFManipulator(wx.Frame):
         	return # failed to get a file
         	
         # put any passwords into the right dict
-        GBLPASSWORDDICT['Split'] = GBLPASSWORD[0]
+        GBLPASSWORDDICT['Split'] = GBLPASSWORD
         
         #print("file opened")
         pages = get_pages(self.Text_Split_InputFile.GetValue(),GBLPASSWORDDICT['Split'])
@@ -658,6 +667,7 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Event_Button_Join_Up(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
+        global GBLPASSWORDDICT
         selecteditem = self.Listbox_Join_Files.GetSelection()
         # if we haven't selected anything (-1) or are on the first item in the list (0) then return
         if (self.Listbox_Join_Files.GetSelection() <= 0):
@@ -668,6 +678,9 @@ class Frame_PDFManipulator(wx.Frame):
         self.Listbox_Join_Files.Clear()
         # insert new list items with the two items swaped over
         self.Listbox_Join_Files.InsertItems(swap_item(listboxitems,selecteditem,selecteditem - 1),0)
+        # swap over passwords in GBLPASSWORDDICT
+        swap_item(GBLPASSWORDDICT['Join'],selecteditem,selecteditem - 1)
+        print(GBLPASSWORDDICT['Join'])
         # update the listbox
         self.Listbox_Join_Files.Update()
         # move the focus to the newly moved item
@@ -676,6 +689,7 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Event_Button_Join_Down(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
+        global GBLPASSWORDDICT
         selecteditem = self.Listbox_Join_Files.GetSelection()
         maxitem = self.Listbox_Join_Files.GetCount()
         #print(maxitem)
@@ -688,6 +702,9 @@ class Frame_PDFManipulator(wx.Frame):
         self.Listbox_Join_Files.Clear()
         # insert new list items with the two items swaped over
         self.Listbox_Join_Files.InsertItems(swap_item(listboxitems,selecteditem,selecteditem + 1),0)
+        # swap over passwords in GBLPASSWORDDICT
+        swap_item(GBLPASSWORDDICT['Join'],selecteditem,selecteditem + 1)
+        print(GBLPASSWORDDICT['Join'])
         # update the listbox
         self.Listbox_Join_Files.Update()
         # move the focus to the newly moved item
@@ -696,9 +713,10 @@ class Frame_PDFManipulator(wx.Frame):
         event.Skip()
 
     def Event_Button_Join_Remove(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
+        global GBLPASSWORDDICT
         # if the listbox is empty or there is nothing selected - return
         maxitem = self.Listbox_Join_Files.GetCount()
-        selecteditem = self.Listbox_Join_Files.GetSelection()
+        selecteditem = self.Listbox_Join_Files.GetSelection() # this is an index
         print(f'selected {selecteditem}. max item {maxitem}')
         if (maxitem == 0) or (selecteditem == -1):
         	return
@@ -709,6 +727,9 @@ class Frame_PDFManipulator(wx.Frame):
         del listboxitems[selecteditem]
         # delete the item that was selected and reinsert the list into the listbox
         # check that we are not trying to insert an empty list into the listbox
+        # remove password from password list
+        del GBLPASSWORDDICT['Join'][selecteditem]
+        print(GBLPASSWORDDICT['Join'])
         if maxitem == 1:
         	return
         self.Listbox_Join_Files.InsertItems(listboxitems,0)
@@ -733,13 +754,13 @@ class Frame_PDFManipulator(wx.Frame):
         	return
         else: # Yes was selected
         	self.Listbox_Join_Files.Clear()
+        	GBLPASSWORDDICT['Join'] = []
         		
         event.Skip()
 
     def Event_Button_Encrypt_InputFile(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
         # show file selection, then put file path and name into Text_Split_InputFile
         global GBLPASSWORDDICT
-        #GBLPASSWORDDICT['Encrypt'] = ''
                 
         # call to get a source file
         result = self.OpenFile(self.Text_Encrypt_InputFile)
@@ -747,7 +768,7 @@ class Frame_PDFManipulator(wx.Frame):
         if result == False:
         	return
         
-        GBLPASSWORDDICT['Encrypt'] = GBLPASSWORD[0]
+        GBLPASSWORDDICT['Encrypt'] = GBLPASSWORD
 
         event.Skip()
 
@@ -759,7 +780,7 @@ class Frame_PDFManipulator(wx.Frame):
     	if result == False:
        		return
        	
-    	GBLPASSWORDDICT['EmplaceSource'] = GBLPASSWORD[0]
+    	GBLPASSWORDDICT['EmplaceSource'] = GBLPASSWORD
        	
     	event.Skip()
 
@@ -772,7 +793,7 @@ class Frame_PDFManipulator(wx.Frame):
        	if result == False:
        		return
        	
-       	GBLPASSWORDDICT['EmplaceSub'] = GBLPASSWORD[0]
+       	GBLPASSWORDDICT['EmplaceSub'] = GBLPASSWORD
        	       	
         event.Skip()
 
@@ -785,12 +806,43 @@ class Frame_PDFManipulator(wx.Frame):
        	if result == False:
        		return
        	
-       	GBLPASSWORDDICT['Rotate'] = GBLPASSWORD[0]
+       	GBLPASSWORDDICT['Rotate'] = GBLPASSWORD
        	       	
         event.Skip()
 
     def Event_Notebook_Page_Changed(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
-        print("Event handler 'Event_Notebook_Page_Changed' not implemented!")
+        #print("Event handler 'Event_Notebook_Page_Changed' not implemented!")
+        # clear each page's input and passwords
+        print(self.Notebook_Panel.GetPageText(self.Notebook_Panel.GetSelection()))
+        NotebookPage = self.Notebook_Panel.GetPageText(self.Notebook_Panel.GetSelection())
+        
+        if NotebookPage == "Split":
+        	self.Text_Split_InputFile.SetValue('')
+        	self.Text_Split_StartPage.SetValue('')
+        	self.Radiobox_Split_OutputOptions.SetSelection(0)  
+        	self.Label_Split_Info.SetLabel('')
+        	GBLPASSWORDDICT['Split'] = ''
+        elif NotebookPage == "Join":
+        	self.Listbox_Join_Files.Clear()
+        	GBLPASSWORDDICT['Join'] = []
+        elif NotebookPage == "Encrypt":
+        	self.Text_Encrypt_InputFile.SetValue('')
+        	self.Radiobox_Encrypt_Options.SetSelection(0)
+        	GBLPASSWORDDICT['Encrypt'] = ''
+        elif NotebookPage == "Substitute Pages":
+        	self.Text_Substitute_InputFile.SetValue('')
+        	self.Text_Substitute_SubstituteFile.SetValue('')
+        	self.Text_Substitute_Pages.SetValue('')
+        	GBLPASSWORDDICT['EmplaceSource'] = ''
+        	GBLPASSWORDDICT['EmplaceSub'] = ''
+        elif NotebookPage == "Rotate Pages":
+        	self.Text_Rotate_InputFile.SetValue('')
+        	self.Text_Rotate_Pages.SetValue('')
+        	self.Radiobox_Rotation_Direction.SetSelection(0)
+        	self.Radiobox_Rotate_Rotation.SetSelection(0)
+        	GBLPASSWORDDICT['Rotate'] = ''
+        	
+        
         event.Skip()
 
     def Event_Button_Panel_Go(self, event):  # wxGlade: Frame_PDFManipulator.<event_handler>
@@ -872,7 +924,7 @@ class Frame_PDFManipulator(wx.Frame):
         	OutputFile = self.SaveFile()
         	
         	self.Statusbar.SetStatusText(f'Working...',2)
-        	result = join(listbox,OutputFile)
+        	result = join(listbox,OutputFile,GBLPASSWORDDICT['Join'])
         	self.Statusbar.SetStatusText(f'',2)
 
         	if result[0] == True:
@@ -1170,21 +1222,29 @@ class Frame_PDFManipulator(wx.Frame):
     def ListboxCheck(self,control,before,after):
     	if after > before:
     		print(f'{after - before} Files added to listbox')
+    		passwordlist = []
     		for i in range(after-1,before-1,-1): # do it in reverse order so that each item can be deleted without some funky index adjustment
     			print(i)
     			print(control.GetString(i))
-    			#item = control.GetString(i)
-    			openable = TryOpenPDF(control.GetString(i))
-    			if openable[0] == False:
-    				dialog = wx.MessageDialog(self,openable[1],caption = "Error",style = wx.OK | wx.ICON_ERROR)
-    				dialog.ShowModal()
-    				print(f'Removing item {control.GetString(i)}')
+    			    			
+    			# check that each file is openable and get password
+    			result = self.GetSource(control.GetString(i))
+    			
+    			if result == True:
+    				# add password to a temp list (remember we are working in revese order!)
+    				passwordlist.append(GBLPASSWORD)
+    			else:
+    				# discard item as we cannot open it
     				control.Delete(i)
+    		# put temp password list in correct order to match the list box, and then add the passwords to the master list
+    		passwordlist.reverse()
+    		GBLPASSWORDDICT['Join'].extend(passwordlist)
+    		print(GBLPASSWORDDICT['Join'])	
     
     def GetSource(self,filename):
     	# this will try to open the source pdf file, and if it errors out show an error. If it's passworded, get password. Return True if it was successful and False otherwise. Return password into global variable for processing later
     	global GBLPASSWORD
-    	GBLPASSWORD = ['']
+    	GBLPASSWORD = ''
     	print(f'GetPass: {filename}')
     	# try to open the pdf - return is a tuple either True, or False with errors listed in index 1
     	trypdf = TryOpenPDF(filename)
@@ -1199,7 +1259,7 @@ class Frame_PDFManipulator(wx.Frame):
     			# enter loop to keep getting password until it's correct
     			while passerror == True:
     				# enter loop and request password
-    				passwd = wx.PasswordEntryDialog(None, "File Password Protected. Enter Password:", f'Password dialog',"" ,style=wx.TextEntryDialogStyle)
+    				passwd = wx.PasswordEntryDialog(None, f'File Password Protected. Enter Password for: \n{filename}', f'Password dialog',"" ,style=wx.TextEntryDialogStyle)
     				ans = passwd.ShowModal()
     				# ok was pressed so check password
     				if ans == wx.ID_OK:
@@ -1208,7 +1268,7 @@ class Frame_PDFManipulator(wx.Frame):
     					# TestEncryption will return true if there is a password error and false if it is cleared.
     					if passerror == False:
     						# password supplied is correct so store it for later
-    						GBLPASSWORD = [passwd.GetValue()]
+    						GBLPASSWORD = passwd.GetValue()
     						return True
     						
     				else: # we clicked cancel and therefore gave up
