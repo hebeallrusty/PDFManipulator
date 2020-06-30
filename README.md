@@ -8,7 +8,7 @@ Written in Python and utilises the pikepdf library (1.16.0), and wxpython (4.0.7
 
 ## Releases
 
-+ 20200604 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/2020604/PDFManipulator.exe)
++ 20200604 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/20200604/PDFManipulator.exe)
 
 ```
 	- Updated pikepdf library to 1.14.0
@@ -21,7 +21,7 @@ Written in Python and utilises the pikepdf library (1.16.0), and wxpython (4.0.7
 ```
 
 
-+ 20200507 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/2020507/PDFManipulator.exe)
++ 20200507 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/20200507/PDFManipulator.exe)
 
 ```
 	- Adding function to rotate PDFs
@@ -39,7 +39,7 @@ Written in Python and utilises the pikepdf library (1.16.0), and wxpython (4.0.7
 	- Changed icons to self drawn ones
 ```
 
-+ 20200403 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/2020403/PDFManipulator.exe)
++ 20200403 [Click here to download](https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/dist/20200403/PDFManipulator.exe)
 
 ```
 	- Initial Release
