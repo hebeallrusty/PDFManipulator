@@ -1,0 +1,5 @@
+build/
+PDFManipulator.exe.spec
+build-command.txt
+__pycache__/
+TestPDFs/

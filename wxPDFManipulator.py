@@ -1259,7 +1259,7 @@ class Frame_PDFManipulator(wx.Frame):
     			# enter loop to keep getting password until it's correct
     			while passerror == True:
     				# enter loop and request password
-    				passwd = wx.PasswordEntryDialog(None, f'File Password Protected. Enter Password for: \n{filename}', f'Password dialog',"" ,style=wx.TextEntryDialogStyle)
+    				passwd = wx.PasswordEntryDialog(None, f'Enter Password for: \n{filename}', f'Password dialog',"" ,style=wx.TextEntryDialogStyle)
     				ans = passwd.ShowModal()
     				# ok was pressed so check password
     				if ans == wx.ID_OK:

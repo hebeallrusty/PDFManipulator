@@ -4,7 +4,7 @@
 
 Program to do basic manipulation to PDF files such as split, join, encrypt, rotate pages and substitute pages
 
-Written in Python and utilises the pikepdf library (1.13.0), and wxpython (4.0.7)
+Written in Python and utilises the pikepdf library (1.14.0), and wxpython (4.0.7)
 
 ## Releases
 
@@ -13,6 +13,10 @@ Written in Python and utilises the pikepdf library (1.13.0), and wxpython (4.0.7
 ```
 	- Updated pikepdf library to 1.14.0
 	- Added Drag and Drop to all file inputs for much simpler and friendlier usage
+	- Added password awareness to all inputs - output will be unencrypted
+	- Checks if the selected file can be opened or not and gives feedback
+	- Checks if the file can be saved to the location or not and gives feedback
+	- Added feedback on status bar so it's easier to see if it's processing or not
 	
 ```
 
