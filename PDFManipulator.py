@@ -7,7 +7,7 @@ from pikepdf import _cpphelpers
 import requests
 
 PROGRAM_DATE = 20200604
-PIKEPDF_VER = '1.14.0'
+PIKEPDF_VER = '1.16.0'
 URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
 
 def ERRORS(error,errobj,filename=None):
