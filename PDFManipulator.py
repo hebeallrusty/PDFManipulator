@@ -6,7 +6,7 @@ import pikepdf
 from pikepdf import _cpphelpers
 import requests
 
-PROGRAM_DATE = 20200604
+PROGRAM_DATE = 20201013
 PIKEPDF_VER = '1.16.0'
 URL_CHECK_UPDATE = 'https://raw.githubusercontent.com/hebeallrusty/PDFManipulator/master/VERSION'
 
@@ -274,11 +274,15 @@ def split(PDF_FILE,OUT_DIR,PageRange,dismantle = False,OpenPassword=""):
 			
 			savetest = TrySavePDF(doc,output,Version = version)
 			#print(type(savetest))
+			print(savetest)
 			if savetest[0] == False:
 				return (False,savetest[1])
 			else:
-				return (True,None)
-
+				# Check if this is the last run - if it is return with a status, else pass to next iteration
+				if i == PageRange[1] - 1:
+					return (True,None)
+				else:
+					pass
 			
 	else:
 		# create new output object

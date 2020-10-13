@@ -455,6 +455,9 @@ class Frame_PDFManipulator(wx.Frame):
         for i in range(len(Statusbar_fields)):
             self.Statusbar.SetStatusText(Statusbar_fields[i], i)
         self.Text_Split_StartPage.SetToolTip("Enter 1-4 for pages 1 to 4 inclusive, or enter a single page number such as 7 for just that page")
+        self.Text_Substitute_InputFile.SetToolTip("This is the original file which has pages that require substituting i.e. pages that need replacing")
+        self.Text_Substitute_SubstituteFile.SetToolTip("This is the file that contains the pages that will be substituted into the original file above i.e. these pages will overwrite those in the original file above")
+        self.Text_Substitute_Pages.SetToolTip("This is the first page that will be substituted in the original file. Pages will be substituted consecutively until the end is reached in the \"Substitute\" file above")
         self.Radiobox_Split_OutputOptions.SetSelection(0)
         self.Radiobox_Encrypt_Options.SetSelection(0)
         self.Radiobox_Rotate_Rotation.SetSelection(0)

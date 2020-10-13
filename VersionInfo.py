@@ -6,8 +6,8 @@ VSVersionInfo(
   ffi=FixedFileInfo(
 # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
 # Set not needed items to zero 0.
-filevers=(20, 6, 4, 0000),
-prodvers=(20, 6, 4, 0000),
+filevers=(20, 10, 13, 0000),
+prodvers=(20, 10, 13, 0000),
 # Contains a bitmask that specifies the valid bits 'flags'r
 mask=0x3f,
 # Contains a bitmask that specifies the Boolean attributes of the file.
@@ -31,12 +31,12 @@ StringFileInfo(
     u'040904B0',
     [StringStruct(u'CompanyName', u'Ashley Butler'),
     StringStruct(u'FileDescription', u'Manipulator for PDF Files'),
-    StringStruct(u'FileVersion', u'20200604 '),
+    StringStruct(u'FileVersion', u'20201013 '),
     StringStruct(u'InternalName', u'PDFManipulator'),
     StringStruct(u'LegalCopyright', u'Copyright (C) 2020 Ashley Butler'),
     StringStruct(u'OriginalFilename', u'PDFManipulator.exe'),
     StringStruct(u'ProductName', u'PDFManipulator'),
-    StringStruct(u'ProductVersion', u'20200604 ()')])
+    StringStruct(u'ProductVersion', u'20201013 ()')])
   ]), 
 VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
